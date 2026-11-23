@@ -2,7 +2,7 @@
   "name": "inkwell-markdown",
   "displayName": "Inkwell Markdown",
   "description": "Edit markdown directly in a beautiful rendered page: Obsidian-style live preview, Markdown Preview Enhanced themes, a Word-style toolbar and shortcuts.",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "publisher": "sajjadmotamed",
   "license": "MIT",
   "icon": "images/icon.png",

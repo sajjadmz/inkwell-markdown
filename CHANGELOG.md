@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.0
+
+- Version renumbered to 0.5.0; same content as 0.4.1.
+
 ## 0.4.1
 
 - Clearer, step-by-step instructions for installing, opening files and choosing the default editor, written for people who don't code (including what the Command Palette is and how to open it from the menu bar).
