@@ -41,17 +41,27 @@ Designed by [sajjadmz](https://github.com/sajjadmz) · Built with [Claude](https
 
 ## Install
 
-### From the Marketplace
+### In VS Code (no coding needed)
 
-Open the Extensions view in VS Code, search for **Inkwell Markdown** and click Install. Or from a terminal:
+1. Open VS Code.
+2. In the left sidebar, click the **Extensions** icon (four small squares, one slightly apart). Or use the menu bar: **View** → **Extensions**.
+3. In the search box at the top of that panel, type **Inkwell Markdown**.
+4. Click **Inkwell Markdown** by *sajjadmotamed*, then click the blue **Install** button.
+5. That's it. Open any `.md` file and it appears in Inkwell (see [How to open a file](#how-to-open-a-file)).
+
+Or install from the [VS Code Marketplace page](https://marketplace.visualstudio.com/items?itemName=sajjadmotamed.inkwell-markdown) by clicking **Install**.
+
+### Cursor, VSCodium and Windsurf
+
+These editors get extensions from [Open VSX](https://open-vsx.org/extension/sajjadmotamed/inkwell-markdown). The steps are the same as above: open the **Extensions** panel, search for **Inkwell Markdown**, click **Install**.
+
+### From a terminal (for coders)
 
 ```
 code --install-extension sajjadmotamed.inkwell-markdown
 ```
 
-### Cursor, VSCodium and Windsurf
-
-These editors use [Open VSX](https://open-vsx.org/). Search for **Inkwell Markdown** in their Extensions view, or run the same command with your editor's CLI (for example `cursor --install-extension sajjadmotamed.inkwell-markdown`).
+For Cursor use `cursor --install-extension sajjadmotamed.inkwell-markdown`.
 
 ### Build from source
 
@@ -73,39 +83,66 @@ npm test
 
 ## How to open a file
 
-Inkwell opens `.md` and `.markdown` files by default, so after installing you can simply open a Markdown file. You do not need any shortcut:
+**You don't need to do anything special.** Once Inkwell is installed, it is already the default for Markdown files (files ending in `.md`). Just open one the way you normally would:
 
-1. **Right-click a file** in the Explorer and choose **Open in Inkwell**.
-2. **Right-click an editor tab** of a Markdown file and choose **Open in Inkwell**.
-3. **Command Palette** (View menu, then Command Palette): type **Inkwell: Open**.
-4. The **preview button** at the top right of a Markdown editor does the same thing.
+1. In VS Code's left sidebar (the **Explorer**, the icon that looks like two sheets of paper), find your Markdown file.
+2. **Click it once.** It opens in Inkwell, looking like a formatted document with the toolbar at the top.
+
+**If a file opens as plain text instead** (for example, the `#` and `**` symbols show everywhere):
+
+- **Right-click** the file in the left sidebar and choose **Open in Inkwell**, or
+- **Right-click the file's tab** at the top of the editor and choose **Open in Inkwell**.
 
 ![An illustration of the Explorer right-click menu with Open in Inkwell highlighted](images/open-with.png)
 
 *Illustration (a mock-up, not a screenshot).*
 
-To go back to the plain text of the same file, click **Open as plain text** at the right end of the toolbar. The shortcut **Cmd+Shift+V** (Mac) or **Ctrl+Shift+V** (Windows and Linux) switches between Inkwell and plain text in either direction. It replaces VS Code's built-in preview shortcut for `.md` files; that preview is still available from the Command Palette.
+**To see the raw Markdown text again,** click the **page icon at the far right of Inkwell's toolbar** (its tooltip says *Open as plain text*). To come back, right-click the tab and choose **Open in Inkwell**.
 
-## Make it (or stop it being) your default `.md` editor
+> **Keyboard users:** Cmd+Shift+V (Mac) or Ctrl+Shift+V (Windows and Linux) switches between Inkwell and plain text. This replaces VS Code's built-in Markdown preview shortcut; that preview is still available from the Command Palette (see below).
 
-After installing, Inkwell is the default editor for Markdown files. There are two ways to change that.
+### What is the "Command Palette"?
 
-**Inside Inkwell**
+Some steps below use the **Command Palette**. It is VS Code's search box for actions: you type what you want to do, then pick it from a list. To open it:
 
-1. Open the Command Palette and run **Inkwell: Toggle open by default**.
-2. A message confirms the new state: ON (Inkwell opens `.md` files) or OFF (VS Code's text editor does).
+1. Go to the **menu bar** and click **View**. On a Mac the menu bar is at the very top of your screen; on Windows and Linux it is at the top of the VS Code window.
+2. Click **Command Palette...**. A search box appears at the top-centre of VS Code.
+3. Type the name of the action (for example `Inkwell`). Matching actions appear as you type.
+4. **Click** the one you want (or press **Enter**).
 
-The setting `inkwell.openByDefault` shows the current state. Use the command to change it, because editing the setting by hand does nothing. Switching OFF adds `*.md` and `*.markdown` entries to `workbench.editorAssociations`; switching ON removes the entries it added.
+Keyboard shortcut for the same box: Cmd+Shift+P (Mac) or Ctrl+Shift+P (Windows and Linux).
 
-**With VS Code's own picker**
+## Make it (or stop it being) your default Markdown editor
 
-1. Open a Markdown file.
-2. Open the Command Palette and run **View: Reopen Editor With...**
-3. Choose **Configure default editor for '*.md'...**, then pick the editor you want.
+Inkwell is the default straight after installing, so most people never need this section. Use it if you want Markdown files to open as plain text by default, or to switch back.
+
+**The simple way**
+
+1. Open the **Command Palette** (menu bar: **View** → **Command Palette...**).
+2. Type `Inkwell default`.
+3. Click **Inkwell: Toggle open by default**.
+4. A small message appears in the bottom-right corner:
+   - **ON** means Markdown files open in Inkwell.
+   - **OFF** means they open as plain text.
+5. Do the same again whenever you want to switch back.
+
+**VS Code's own way** (works for any file type)
+
+1. Open any Markdown file.
+2. Open the **Command Palette** (menu bar: **View** → **Command Palette...**).
+3. Type `Reopen Editor With` and click **View: Reopen Editor With...**.
+4. In the list that appears, click **Configure default editor for '*.md'...**.
+5. Click **Inkwell** to make it the default, or **Text Editor** for plain text.
 
 ![An illustration of VS Code's Reopen Editor With picker listing Inkwell as the default](images/default-editor.png)
 
-*Illustration (a mock-up, not a screenshot). The exact wording can differ between VS Code versions.*
+*Illustration (a mock-up, not a screenshot). The exact wording can differ slightly between VS Code versions.*
+
+<details>
+<summary>For advanced users: what the toggle changes</summary>
+
+The setting `inkwell.openByDefault` shows the current state; change it with the command rather than by hand. Switching OFF adds `*.md` and `*.markdown` entries to `workbench.editorAssociations`; switching ON removes the entries it added.
+</details>
 
 ## Toolbar
 

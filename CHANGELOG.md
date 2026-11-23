@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1
+
+- Clearer, step-by-step instructions for installing, opening files and choosing the default editor, written for people who don't code (including what the Command Palette is and how to open it from the menu bar).
+
 ## 0.4.0 - First public release
 
 - Live-preview Markdown editor: headings, bold, italic, strikethrough, inline code, links, quotes and rules are shown styled; the Markdown symbols appear on the line you are editing.
