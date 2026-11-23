@@ -92,6 +92,9 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
   /** A formatting shortcut (package.json keybinding) was pressed: tell the focused Inkwell webview. */
   format(action: string): void { if (this.activeSession?.ready) void this.activeSession.webview.postMessage({ type: 'format', action }); }
 
+  /** inkwell.undo / inkwell.redo (package.json keybindings): run CodeMirror's history in the focused Inkwell webview. */
+  history(action: 'undo' | 'redo'): void { if (this.activeSession?.ready) void this.activeSession.webview.postMessage({ type: 'history', action }); }
+
   private delay(): Promise<void> {
     return this.latencyMax > 0 ? new Promise((r) => setTimeout(r, Math.random() * this.latencyMax)) : Promise.resolve();
   }
@@ -257,8 +260,6 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
           case 'setTheme':
             if (typeof m.value === 'string' && (m.value === STYLE_AUTO || listThemes(this.dist).includes(m.value))) void vscode.workspace.getConfiguration('inkwell').update('previewTheme', m.value, vscode.ConfigurationTarget.Global);
             break;
-          case 'undo': void vscode.commands.executeCommand('undo'); break;
-          case 'redo': void vscode.commands.executeCommand('redo'); break;
           case 'openLink':
             if (typeof m.href === 'string') void openLink(document.uri, m.href, (u, frag) => this.scrollTo(u, frag));
             break;
@@ -364,6 +365,8 @@ export function activate(ctx: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('inkwell.toggleOpenByDefault', toggleOpenByDefault),
     ...FORMAT_ACTIONS.map((a) => vscode.commands.registerCommand(`inkwell.format.${a}`, () => provider.format(a))),
+    vscode.commands.registerCommand('inkwell.undo', () => provider.history('undo')),
+    vscode.commands.registerCommand('inkwell.redo', () => provider.history('redo')),
     vscode.commands.registerCommand('inkwell.choosePageStyle', () => choosePageStyle(path.join(ctx.extensionPath, 'dist'))),
   );
 }

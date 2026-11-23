@@ -1,6 +1,7 @@
 // Obsidian-style live preview: everything here is a CodeMirror decoration. The document is never changed
 // by this file (the only edit is the task checkbox, which is an explicit user click: '[ ]' <-> '[x]').
 import { EditorState, StateEffect, StateField, type ChangeSpec, type Range } from '@codemirror/state';
+import { setTip } from './tooltip';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
 import type { SyntaxNodeRef } from '@lezer/common';
@@ -111,7 +112,7 @@ function ensureTableChrome(): void {
       group = g; gEl = document.createElement('div'); gEl.className = 'lm-fbgroup';
       const t = document.createElement('span'); t.className = 'lm-fbtitle'; t.textContent = g; gEl.appendChild(t); barEl.appendChild(gEl);
     }
-    const b = document.createElement('button'); b.type = 'button'; b.dataset.op = op; b.title = tip; b.className = 'lm-fb lm-k-' + kind; b.setAttribute('aria-label', tip);
+    const b = document.createElement('button'); b.type = 'button'; b.dataset.op = op; b.className = 'lm-fb lm-k-' + kind; setTip(b, tip);
     b.innerHTML = ICON[op] + `<span>${label}</span>`;
     gEl!.appendChild(b);
   }
@@ -326,9 +327,9 @@ class TableWidget extends WidgetType {
     const d = document.createElement('div');
     d.className = 'lm-tablewrap';
     d.contentEditable = 'false';
-    const hint = document.createElement('button'); hint.type = 'button'; hint.className = 'lm-tblhint'; hint.textContent = 'Edit table \u22EF'; hint.title = 'Table actions: add or delete rows and columns, alignment';
-    const hr = document.createElement('button'); hr.type = 'button'; hr.className = 'lm-tblhandle lm-hrow'; hr.dataset.op = 'rowBelow'; hr.title = 'Add row at the end'; hr.setAttribute('aria-label', 'Add row at the end'); hr.textContent = '+';
-    const hc = document.createElement('button'); hc.type = 'button'; hc.className = 'lm-tblhandle lm-hcol'; hc.dataset.op = 'colRight'; hc.title = 'Add column at the end'; hc.setAttribute('aria-label', 'Add column at the end'); hc.textContent = '+';
+    const hint = document.createElement('button'); hint.type = 'button'; hint.className = 'lm-tblhint'; hint.textContent = 'Edit table \u22EF'; setTip(hint, 'Table actions: add or delete rows and columns, alignment');
+    const hr = document.createElement('button'); hr.type = 'button'; hr.className = 'lm-tblhandle lm-hrow'; hr.dataset.op = 'rowBelow'; setTip(hr, 'Add row at the end'); hr.textContent = '+';
+    const hc = document.createElement('button'); hc.type = 'button'; hc.className = 'lm-tblhandle lm-hcol'; hc.dataset.op = 'colRight'; setTip(hc, 'Add column at the end'); hc.textContent = '+';
     d.append(hint, hr, hc);
     buildTable(d, view, this.text);
     wireTable(d, view);
@@ -364,7 +365,7 @@ class CodeBarWidget extends WidgetType {
   toDOM(): HTMLElement {
     const d = document.createElement('span'); d.className = 'lm-codebar'; d.contentEditable = 'false';
     if (this.lang) { const l = document.createElement('span'); l.className = 'lm-codelang'; l.textContent = this.lang; d.appendChild(l); }
-    const b = document.createElement('button'); b.type = 'button'; b.className = 'lm-codecopy'; b.textContent = 'Copy'; b.title = 'Copy code to the clipboard';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'lm-codecopy'; b.textContent = 'Copy'; setTip(b, 'Copy code to the clipboard');
     b.addEventListener('mousedown', (e) => e.preventDefault());
     b.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();

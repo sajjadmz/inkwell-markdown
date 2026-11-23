@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0
+
+- New: hover notes on every toolbar button, dropdown and dropdown item, and on the table bar and handles. They show the action name and the shortcut for your system.
+- Fixed: Undo/Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Shift+Z, Ctrl+Y) now work in the editor. They undo only your own edits, never changes made by another editor or tool, and also work inside table cells.
+
 ## 0.5.0
 
 - Version renumbered to 0.5.0; same content as 0.4.1.

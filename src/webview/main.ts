@@ -1,13 +1,15 @@
 // Webview: a CodeMirror 6 editor kept in sync with the VS Code TextDocument (see sync.ts).
-// It never writes files. CodeMirror's own history is NOT loaded: undo/redo belong to VS Code.
-import { Annotation, EditorState } from '@codemirror/state';
+// It never writes files. Undo/redo are CodeMirror's own history: local edits only (remote changes are added with
+// addToHistory(false)); an undo is an ordinary local change that the sync client sends to the document.
+import { Annotation, EditorState, Transaction } from '@codemirror/state';
 import { EditorView, keymap } from '@codemirror/view';
-import { defaultKeymap } from '@codemirror/commands';
+import { defaultKeymap, history, undo, redo } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { HighlightStyle, syntaxHighlighting, syntaxTree } from '@codemirror/language';
 import { tags as t } from '@lezer/highlight';
 import { livePreview, setBaseUri, setFrozen, refreshPreview, hooks } from './livepreview';
+import { initTooltips, TOOLTIP_CSS } from './tooltip';
 import { Toolbar, TOOLBAR_CSS, type ToolbarState } from './toolbar';
 import * as F from './format';
 import { setMermaidDark, parseMermaid } from './mermaidwidget';
@@ -56,9 +58,8 @@ const highlight = HighlightStyle.define([
   { tag: [t.deleted], class: cls('deleted') },
 ]);
 
-hooks.undo = () => vscode.postMessage({ type: 'undo' });
-hooks.redo = () => vscode.postMessage({ type: 'redo' });
-const undoRedo = (type: 'undo' | 'redo') => () => { vscode.postMessage({ type }); return true; };
+hooks.undo = () => { if (view) undo(view); };
+hooks.redo = () => { if (view) redo(view); };
 
 /** Cmd/Ctrl-click on a link or image destination asks the extension to open it. */
 function linkAt(v: EditorView, pos: number): string | null {
@@ -77,19 +78,20 @@ function createView(text: string): EditorView {
       doc: text,
       extensions: [
         keymap.of([
-          { key: 'Mod-z', run: undoRedo('undo'), preventDefault: true },
-          { key: 'Mod-Shift-z', run: undoRedo('redo'), preventDefault: true },
-          { key: 'Mod-y', run: undoRedo('redo'), preventDefault: true },
+          { key: 'Mod-z', run: undo, preventDefault: true, stopPropagation: true },
+          { key: 'Mod-Shift-z', run: redo, preventDefault: true, stopPropagation: true },
+          { key: 'Mod-y', run: redo, preventDefault: true, stopPropagation: true },
           ...defaultKeymap,
         ]),
+        history(),
         EditorView.lineWrapping,
         markdown({ base: markdownLanguage, codeLanguages: languages, addKeymap: false }),
         livePreview,
         syntaxHighlighting(highlight),
         EditorView.domEventHandlers({
-          beforeinput(e) {
-            if (e.inputType === 'historyUndo') { e.preventDefault(); vscode.postMessage({ type: 'undo' }); return true; }
-            if (e.inputType === 'historyRedo') { e.preventDefault(); vscode.postMessage({ type: 'redo' }); return true; }
+          beforeinput(e, vw) {
+            if (e.inputType === 'historyUndo') { e.preventDefault(); undo(vw); return true; }
+            if (e.inputType === 'historyRedo') { e.preventDefault(); redo(vw); return true; }
             return false;
           },
           mousedown(e, vw) {
@@ -142,7 +144,7 @@ function replaceText(text: string): void {
   while (a < max && cur.charCodeAt(a) === text.charCodeAt(a)) a++;
   let b = 0;
   while (b < max - a && cur.charCodeAt(cur.length - 1 - b) === text.charCodeAt(text.length - 1 - b)) b++;
-  view.dispatch({ changes: { from: a, to: cur.length - b, insert: text.slice(a, text.length - b) }, annotations: remote.of(true) });
+  view.dispatch({ changes: { from: a, to: cur.length - b, insert: text.slice(a, text.length - b) }, annotations: [remote.of(true), Transaction.addToHistory.of(false)] });
 }
 
 function scrollToFragment(f: string): void {
@@ -160,7 +162,7 @@ function applyHostMessage(m: ToClient): void {
   const op = sync.receive(m);
   if (!op) return;
   if (op.kind === 'replace') replaceText(op.text);
-  else view?.dispatch({ changes: op.changes, annotations: remote.of(true) });
+  else view?.dispatch({ changes: op.changes, annotations: [remote.of(true), Transaction.addToHistory.of(false)] });
 }
 
 function debugEdit(c: LineChange): void {
@@ -181,6 +183,7 @@ window.addEventListener('message', (e) => {
       themeEl.textContent = String(m.css ?? ''); applyPageColours();
       toolbar.setThemes((m.themes as string[]) ?? [], String(m.current ?? 'auto'));
       break;
+    case 'history': if (view) (m.action === 'redo' ? redo : undo)(view); break; // inkwell.undo / inkwell.redo forwarded by VS Code
     case 'format': { // a shortcut forwarded by VS Code (see package.json keybindings)
       const a = String(m.action);
       runAction(a);
@@ -310,6 +313,34 @@ window.addEventListener('message', (e) => {
     case 'debugDom':
       vscode.postMessage({ type: 'debugReply', id: m.id, value: { html: document.documentElement.outerHTML, baseUri } });
       break;
+    case 'debugFocus': { // test only: put keyboard focus in the editor (or a table cell), like a click would
+      if (m.cell) (document.querySelector(`.lm-tablewrap [data-r="${String((m.cell as {r:number}).r)}"][data-c="${String((m.cell as {c:number}).c)}"]`) as HTMLElement).focus();
+      else view!.focus();
+      vscode.postMessage({ type: 'debugReply', id: m.id, value: { hasFocus: document.hasFocus(), active: document.activeElement?.className ?? '' } });
+      break;
+    }
+    case 'debugKey': { // test only: a real keydown event on the focused element, as the keyboard would send it
+      const target = (document.activeElement as HTMLElement | null) ?? view!.contentDOM;
+      const ev = new KeyboardEvent('keydown', { key: String(m.key), metaKey: !!m.meta, ctrlKey: !!m.ctrl, shiftKey: !!m.shift, bubbles: true, cancelable: true });
+      target.dispatchEvent(ev);
+      void sync.whenIdle().then(() => vscode.postMessage({ type: 'debugReply', id: m.id, value: { defaultPrevented: ev.defaultPrevented } }));
+      break;
+    }
+    case 'debugHover': { // test only: hover (mouseover / mouseout) a control, report the tooltip shown after the delay
+      const el = document.querySelector(String(m.selector)) as HTMLElement | null;
+      if (!el) { vscode.postMessage({ type: 'debugReply', id: m.id, error: 'no element ' + String(m.selector) }); break; }
+      const before = { doc: view!.state.doc.toString(), sel: view!.state.selection.main.toJSON() };
+      const fire = (t: string) => el.dispatchEvent(new MouseEvent(t, { bubbles: true, cancelable: true, relatedTarget: t === 'mouseout' ? document.body : null }));
+      if (m.op === 'out') fire('mouseout'); else { fire('mouseenter'); fire('mouseover'); }
+      setTimeout(() => {
+        const tt = document.querySelector('.lm-tooltip') as HTMLElement | null;
+        const shown = !!tt && !tt.hidden; const r = tt?.getBoundingClientRect();
+        const after = { doc: view!.state.doc.toString(), sel: view!.state.selection.main.toJSON() };
+        vscode.postMessage({ type: 'debugReply', id: m.id, value: { shown, text: shown ? tt!.textContent : null, rect: r ? { l: r.left, t: r.top, r: r.right, b: r.bottom } : null, vw: window.innerWidth, vh: window.innerHeight, pe: tt ? getComputedStyle(tt).pointerEvents : null, same: JSON.stringify(before) === JSON.stringify(after), title: el.getAttribute('title') } });
+      }, Number(m.wait ?? 450));
+      break;
+    }
+    case 'debugClick': { const el = document.querySelector(String(m.selector)) as HTMLElement | null; el?.click(); vscode.postMessage({ type: 'debugReply', id: m.id, value: !!el }); break; }
     case 'debugEdit':
       try { debugEdit(m.change as LineChange); } catch (err) { vscode.postMessage({ type: 'debugReply', id: m.id, error: String(err) }); break; }
       void sync.whenIdle().then(() => vscode.postMessage({ type: 'debugReply', id: m.id, value: true }));
@@ -327,7 +358,7 @@ const toolbar = new Toolbar(
 toolbar.onColour = (k, v) => { if (k === 'text') last.text = v; else last.highlight = v; };
 document.body.prepend(toolbar.el);
 new ResizeObserver(() => document.documentElement.style.setProperty('--lm-tbh', toolbar.el.offsetHeight + 'px')).observe(toolbar.el);
-const tbStyle = document.createElement('style'); tbStyle.textContent = TOOLBAR_CSS; document.head.appendChild(tbStyle);
+const tbStyle = document.createElement('style'); tbStyle.textContent = TOOLBAR_CSS + TOOLTIP_CSS; initTooltips(); document.head.appendChild(tbStyle);
 
 const inCell = (): boolean => !!(document.activeElement as HTMLElement | null)?.closest?.('.lm-tablewrap');
 
@@ -394,6 +425,15 @@ const SHORTCUTS: Array<{ code: string; shift?: boolean; alt?: boolean; action: s
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
 window.addEventListener('keydown', (e) => {
   if (e.isComposing || !(isMac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey)) return;
+  // Undo / redo: CodeMirror's history, in the editor and in table cells. Stopped here so that VS Code's own
+  // forwarding (which would run its native undo) and the inkwell.undo command never also act on this key press.
+  const k = e.key.toLowerCase();
+  const field = (e.target as HTMLElement | null)?.closest?.('input,textarea,select');
+  if (!e.altKey && !field && view && (k === 'z' || (k === 'y' && !isMac && !e.shiftKey))) {
+    e.preventDefault(); e.stopPropagation();
+    (k === 'y' || e.shiftKey ? redo : undo)(view);
+    return;
+  }
   // On Windows/Linux Ctrl+Alt is AltGr on many layouts, so Alt shortcuts there are Ctrl+Shift+Alt.
   const s = SHORTCUTS.find((x) => x.code === e.code && (!!x.shift || (!isMac && !!x.alt)) === e.shiftKey && !!x.alt === e.altKey);
   if (!s) return;

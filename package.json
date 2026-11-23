@@ -2,7 +2,7 @@
   "name": "inkwell-markdown",
   "displayName": "Inkwell Markdown",
   "description": "Edit markdown directly in a beautiful rendered page: Obsidian-style live preview, Markdown Preview Enhanced themes, a Word-style toolbar and shortcuts.",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "publisher": "sajjadmotamed",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -167,6 +167,14 @@
         "command": "inkwell.choosePageStyle",
         "title": "Choose page style",
         "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.undo",
+        "title": "Inkwell: Undo"
+      },
+      {
+        "command": "inkwell.redo",
+        "title": "Inkwell: Redo"
       }
     ],
     "keybindings": [
@@ -276,6 +284,23 @@
         "key": "ctrl+shift+c",
         "mac": "cmd+shift+c",
         "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.undo",
+        "key": "ctrl+z",
+        "mac": "cmd+z",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.redo",
+        "key": "ctrl+shift+z",
+        "mac": "cmd+shift+z",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.redo",
+        "key": "ctrl+y",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
       }
     ],
     "menus": {
@@ -368,6 +393,14 @@
         },
         {
           "command": "inkwell.format.textcolor",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.undo",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.redo",
           "when": "activeCustomEditorId == 'inkwell.editor'"
         }
       ]

@@ -1,5 +1,6 @@
 // The fixed toolbar. Buttons never take focus (mousedown is cancelled), so the editor's selection is untouched.
 import { TEXT_COLOURS, HIGHLIGHTS, LANGUAGES, DIAGRAMS } from './format';
+import { setTip } from './tooltip';
 
 export interface ToolbarHost {
   run(name: string, arg?: string): void;
@@ -65,7 +66,7 @@ export class Toolbar {
 
   private btn(name: string, icon: string, tip: string, onClick: (b: HTMLElement) => void, extra = ''): HTMLElement {
     const b = document.createElement('button');
-    b.type = 'button'; b.className = 'lm-tb ' + extra; b.title = tip; b.setAttribute('aria-label', tip.replace(/ \(.*\)$/, ''));
+    b.type = 'button'; b.className = 'lm-tb ' + extra; setTip(b, tip.replace(/ \((.*)\)$/, '  $1'), tip.replace(/ \(.*\)$/, ''));
     b.dataset.action = name; b.innerHTML = icon;
     b.addEventListener('click', () => onClick(b));
     this.buttons.set(name, b); this.el.appendChild(b);
@@ -111,7 +112,7 @@ export class Toolbar {
       ...palette.map((c) => ({ label: c.name, swatch: c.value, run: () => { if (kind === 'text') this.lastText = c.value; else this.lastHighlight = c.value; set(); this.onColour(kind, c.value); this.host.run('colour:' + kind, c.value); } })),
       { label: 'No colour', run: () => this.host.run('colour:' + kind, 'none') },
     ];
-    const caret = this.btn(name + '-menu', ICON.caret, label + ' colours', (b) => this.openMenu(b, items()), 'lm-split-r lm-caret');
+    const caret = this.btn(name + '-menu', ICON.caret, 'Choose ' + label.toLowerCase(), (b) => this.openMenu(b, items()), 'lm-split-r lm-caret');
     caret.dataset.menu = '1';
     (main as HTMLElement & { refresh?: () => void }).refresh = set;
   }
@@ -131,6 +132,7 @@ export class Toolbar {
       if (it.swatch) { const s = document.createElement('i'); s.className = 'lm-swatch lg'; s.style.background = it.swatch; row.appendChild(s); }
       const l = document.createElement('span'); l.textContent = (it.checked ? '✓ ' : '') + it.label; row.appendChild(l);
       if (it.hint) { const h = document.createElement('em'); h.textContent = it.hint; row.appendChild(h); }
+      setTip(row, it.hint ? `${it.label}  ${it.hint}` : it.label, it.label); row.removeAttribute('aria-label');
       row.addEventListener('click', () => { this.closeMenu(); it.run(); });
       m.appendChild(row);
     }

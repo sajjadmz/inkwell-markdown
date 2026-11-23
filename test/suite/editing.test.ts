@@ -74,7 +74,7 @@ suite('Editing through the webview', () => {
     await closeTab(file);
   });
 
-  test('S5 undo and redo use VS Code history', async () => {
+  test('S5 undo and redo (CodeMirror history, via the inkwell.undo / inkwell.redo keybinding commands)', async () => {
     const file = copy('lf.md', 's5.md');
     const orig = fs.readFileSync(file);
     const { uri, doc } = await openLive(file);
@@ -83,13 +83,13 @@ suite('Editing through the webview', () => {
     assert.notStrictEqual(doc.getText(), text0);
     const edited = doc.getText();
     const undone = waitFor(() => doc.getText() === text0, vscode.workspace.onDidChangeTextDocument);
-    await vscode.commands.executeCommand('undo');
+    await vscode.commands.executeCommand('inkwell.undo');
     await undone;
     assert.strictEqual(await webviewText(uri), norm(text0), 'webview follows undo');
     await doc.save();
     assert.deepStrictEqual(fs.readFileSync(file), orig, 'bytes equal the original');
     const redone = waitFor(() => doc.getText() === edited, vscode.workspace.onDidChangeTextDocument);
-    await vscode.commands.executeCommand('redo');
+    await vscode.commands.executeCommand('inkwell.redo');
     await redone;
     assert.strictEqual(await webviewText(uri), norm(edited));
     await closeTab(file);
