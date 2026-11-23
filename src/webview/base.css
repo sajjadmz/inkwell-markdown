@@ -1,0 +1,100 @@
+/* Structural CSS for the live-preview DOM. The look (fonts, colours, sizes) comes from the adapted crossnote theme. */
+#root { padding: 2em; padding-top: calc(var(--lm-tbh, 40px) + 1.2em); box-sizing: border-box; min-height: 100vh; background-color: inherit; }
+.cm-editor, .cm-editor .cm-scroller, .cm-editor .cm-content { background-color: transparent; color: inherit; }
+.cm-editor { outline: none; min-height: calc(100vh - 4em); }
+.cm-editor.cm-focused { outline: none; }
+.cm-editor .cm-scroller { font-family: inherit; line-height: inherit; overflow: visible; }
+.cm-editor .cm-content { font-family: inherit; font-size: inherit; padding: 0; caret-color: currentColor; min-height: calc(100vh - 4em); }
+.cm-editor .cm-content > .cm-line { padding-left: 0; padding-right: 0; }
+.cm-content > .cm-line:first-child { margin-top: 0; }
+.cm-cursor, .cm-dropCursor { border-left-color: currentColor !important; }
+
+/* Block spacing: theme margins belong to the first / last line of a block only. */
+/* CodeMirror ignores vertical margins when it measures lines, so spacing is a transparent border (see scripts/adapt.mjs). */
+.cm-content .cm-line.lm-blk:not(.lm-first) { margin-top: 0; padding-top: 0; border-top-width: 0; }
+.cm-content .cm-line.lm-blk:not(.lm-last) { margin-bottom: 0; padding-bottom: 0; border-bottom-width: 0; }
+.cm-content .cm-line.lm-li { margin-top: 0; margin-bottom: 0; border-top-width: 0; border-bottom-width: 0; }
+.cm-content .cm-line.lm-li.lm-last { border-bottom: 16px solid transparent; background-clip: padding-box; }
+.cm-content .cm-line.lm-blank { border-width: 0; }
+.cm-content .cm-line.lm-blank:not(.lm-active) { height: 4px; font-size: 0; line-height: 0; overflow: hidden; }
+.cm-content .cm-line.lm-hidden { font-size: 0; line-height: 0; height: 0; overflow: hidden; margin: 0; padding: 0; border: 0 !important; }
+.cm-content .cm-line.lm-pre { white-space: pre-wrap; overflow: visible; position: relative; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; font-size: .875em; line-height: 1.5;
+  padding-left: 14px; padding-right: 14px; background-clip: padding-box; background-color: #f6f8fa; color: #24292f; box-shadow: inset 1px 0 0 #d0d7de, inset -1px 0 0 #d0d7de; tab-size: 4; border-radius: 0; }
+.lm-dark-page .cm-content .cm-line.lm-pre { background-color: #161b22; color: #e6edf3; box-shadow: inset 1px 0 0 #30363d, inset -1px 0 0 #30363d; }
+.cm-content .cm-line.lm-pre.lm-codetop { border-top-left-radius: 6px; border-top-right-radius: 6px; box-shadow: inset 1px 0 0 #d0d7de, inset -1px 0 0 #d0d7de, inset 0 1px 0 #d0d7de; }
+.cm-content .cm-line.lm-pre.lm-codebot { border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; box-shadow: inset 1px 0 0 #d0d7de, inset -1px 0 0 #d0d7de, inset 0 -1px 0 #d0d7de; }
+.cm-content .cm-line.lm-pre.lm-codetop.lm-codebot { box-shadow: inset 0 0 0 1px #d0d7de; }
+.lm-dark-page .cm-content .cm-line.lm-pre.lm-codetop { box-shadow: inset 1px 0 0 #30363d, inset -1px 0 0 #30363d, inset 0 1px 0 #30363d; }
+.lm-dark-page .cm-content .cm-line.lm-pre.lm-codebot { box-shadow: inset 1px 0 0 #30363d, inset -1px 0 0 #30363d, inset 0 -1px 0 #30363d; }
+.lm-dark-page .cm-content .cm-line.lm-pre.lm-codetop.lm-codebot { box-shadow: inset 0 0 0 1px #30363d; }
+.lm-codebar { position: absolute; top: 3px; right: 8px; display: inline-flex; align-items: center; gap: 6px; font: 11px/1 -apple-system, system-ui, sans-serif; user-select: none; z-index: 2; }
+.lm-codelang { opacity: .65; color: inherit; text-transform: lowercase; }
+.lm-codecopy { all: unset; box-sizing: border-box; padding: 3px 7px; border-radius: 5px; cursor: pointer; opacity: 0; color: #24292f; background: #ffffff; border: 1px solid #d0d7de; }
+.lm-dark-page .lm-codecopy { color: #e6edf3; background: #21262d; border-color: #30363d; }
+.cm-line.lm-pre:hover .lm-codecopy, .lm-codecopy:focus-visible { opacity: 1; }
+/* Inline code */
+.cm-content .cm-lm-code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: .875em; padding: .15em .35em; border-radius: 5px; background-color: rgba(175, 184, 193, .25); }
+.lm-dark-page .cm-content .cm-lm-code { background-color: rgba(110, 118, 129, .4); }
+/* Fallback syntax colours (zero specificity: any theme's own token colours win) */
+:where(.cm-line.lm-pre) :where(.token.comment) { color: #6e7781; font-style: italic; }
+:where(.cm-line.lm-pre) :where(.token.keyword, .token.tag, .token.inserted) { color: #cf222e; }
+:where(.cm-line.lm-pre) :where(.token.string, .token.attr-value, .token.regex) { color: #0a3069; }
+:where(.cm-line.lm-pre) :where(.token.number, .token.boolean, .token.property, .token.constant) { color: #0550ae; }
+:where(.cm-line.lm-pre) :where(.token.function, .token.class-name) { color: #8250df; }
+:where(.cm-line.lm-pre) :where(.token.attr-name, .token.variable) { color: #953800; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.comment) { color: #8b949e; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.keyword, .token.tag, .token.inserted) { color: #ff7b72; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.string, .token.attr-value, .token.regex) { color: #a5d6ff; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.number, .token.boolean, .token.property, .token.constant) { color: #79c0ff; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.function, .token.class-name) { color: #d2a8ff; }
+.lm-dark-page :where(.cm-line.lm-pre) :where(.token.attr-name, .token.variable) { color: #ffa657; }
+.cm-content .cm-line.lm-p { white-space: pre-wrap; }
+.cm-content .cm-line.lm-hr.lm-active { height: auto; background: none; margin: 0; border-width: 0; }
+.cm-content .cm-line.lm-tableraw { font-family: Menlo, Monaco, Consolas, monospace; font-size: .9em; }
+.cm-content .cm-line.lm-fm { opacity: .55; font-family: Menlo, Monaco, Consolas, monospace; font-size: .85em; }
+.lm-fm-widget { display: flow-root; opacity: .55; font-size: .8em; padding: 2px 0 16px; margin: 0; border-bottom: 1px dashed currentColor; cursor: text; }
+.lm-tablewrap { position: relative; display: flow-root; margin: 0; padding: 0 0 16px; }
+.lm-tablewrap table { margin-top: 0; margin-bottom: 0; display: table; width: auto; }
+.lm-tablewrap th, .lm-tablewrap td { min-width: 3em; outline: none; white-space: pre-wrap; }
+.lm-tablewrap th:focus, .lm-tablewrap td:focus { box-shadow: inset 0 0 0 2px rgba(56, 139, 253, .75); }
+/* Table controls. Colours come from the page (--lm-bg / --lm-fg); the accents are picked by contrast against the page background. */
+.lm-floatbar, .lm-ctxmenu { --acc-add: #1a7f37; --acc-del: #cf222e; --fbbg: var(--lm-bg, #fff); --fbfg: var(--lm-fg, #333); }
+.lm-dark-page .lm-floatbar, .lm-dark-page .lm-ctxmenu, .lm-dark-page .lm-tablewrap { --acc-add: #56d364; --acc-del: #ff7b72; }
+.lm-floatbar { position: fixed; z-index: 70; display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; padding: 3px 6px; border-radius: 8px; font: 12px/1 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--fbbg); color: var(--fbfg); border: 1px solid color-mix(in srgb, var(--fbfg) 30%, transparent); box-shadow: 0 4px 14px rgba(0,0,0,.28); user-select: none; }
+.lm-floatbar[hidden] { display: none; }
+.lm-fbgroup { display: flex; align-items: center; gap: 1px; }
+.lm-fbtitle { opacity: .7; font-weight: 600; margin-right: 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+.lm-fb { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 3px; min-width: 28px; height: 28px; padding: 0 5px; border-radius: 5px; cursor: pointer; color: var(--fbfg); white-space: nowrap; }
+.lm-fb svg, .lm-ctxitem svg { flex: none; width: 20px; height: 20px; }
+.lm-k-add svg { color: var(--acc-add); } .lm-k-del svg { color: var(--acc-del); }
+.lm-fb:hover, .lm-ctxitem:hover { background: color-mix(in srgb, var(--fbfg) 15%, transparent); }
+.lm-fb:focus-visible, .lm-ctxitem:focus-visible { outline: 2px solid rgba(56, 139, 253, .8); }
+.lm-ctxmenu { position: fixed; z-index: 80; min-width: 190px; padding: 4px; border-radius: 8px; font: 13px/1.2 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; background: var(--fbbg); color: var(--fbfg);
+  border: 1px solid color-mix(in srgb, var(--fbfg) 30%, transparent); box-shadow: 0 6px 18px rgba(0,0,0,.3); }
+.lm-ctxitem { all: unset; box-sizing: border-box; display: flex; width: 100%; align-items: center; gap: 8px; height: 28px; padding: 0 8px; border-radius: 5px; cursor: pointer; color: var(--fbfg); }
+.lm-ctxsep { height: 1px; margin: 3px 4px; background: color-mix(in srgb, var(--fbfg) 22%, transparent); }
+.lm-tblhint, .lm-tblhandle { all: unset; box-sizing: border-box; position: absolute; z-index: 4; opacity: 0; pointer-events: none; transition: opacity .12s; cursor: pointer; font: 11px/1 -apple-system, system-ui, sans-serif; color: var(--lm-fg, #333);
+  background: color-mix(in srgb, var(--lm-bg, #fff) 88%, var(--lm-fg, #333)); border: 1px solid color-mix(in srgb, var(--lm-fg, #333) 30%, transparent); border-radius: 6px; }
+.lm-tblhint { padding: 4px 8px; }
+.lm-tblhandle { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 600; color: var(--acc-add, #1a7f37); }
+.lm-tablewrap:hover .lm-tblhint, .lm-tablewrap:hover .lm-tblhandle { opacity: .9; pointer-events: auto; }
+.lm-tblhint:hover, .lm-tblhandle:hover { opacity: 1 !important; background: color-mix(in srgb, var(--lm-fg, #333) 18%, var(--lm-bg, #fff)); }
+.lm-mermaid { display: flow-root; margin: 0; padding: 4px 0 16px; text-align: center; cursor: default; }
+.lm-mermaid svg { max-width: 100%; height: auto; }
+.lm-mermaid-below { border-top: 1px dashed color-mix(in srgb, currentColor 25%, transparent); padding-top: 8px; }
+.lm-mmd-err { font-size: 11px; color: #d73a49; white-space: pre-wrap; text-align: left; margin-top: 4px; font-family: Menlo, Monaco, Consolas, monospace; }
+.cm-lm-colour { border-radius: 2px; }
+/* Native selection (no drawSelection layer): visible over every theme background, on content and lines alike. */
+.cm-content ::selection, .cm-content::selection, .lm-tablewrap ::selection { background: rgba(56, 139, 253, 0.40); color: inherit; }
+
+.cm-lm-strong { font-weight: bold; }
+.cm-lm-em { font-style: italic; }
+.cm-lm-del { text-decoration: line-through; }
+.cm-lm-link { cursor: pointer; }
+.cm-lm-mark { opacity: .45; }
+.lm-bullet { display: inline-block; width: 1em; text-align: left; }
+.lm-checkbox { margin: 0 .3em .25em 0; vertical-align: middle; cursor: pointer; }
+.lm-imgwrap { display: flow-root; margin: 0; padding: 4px 0 16px; }
+.lm-imgwrap img { max-width: 100%; }
+.lm-imgmissing { opacity: .6; font-style: italic; }

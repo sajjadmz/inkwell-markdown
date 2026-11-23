@@ -1,0 +1,424 @@
+{
+  "name": "inkwell-markdown",
+  "displayName": "Inkwell Markdown",
+  "description": "Edit markdown directly in a beautiful rendered page: Obsidian-style live preview, Markdown Preview Enhanced themes, a Word-style toolbar and shortcuts.",
+  "version": "0.4.0",
+  "publisher": "sajjadmotamed",
+  "license": "MIT",
+  "icon": "images/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sajjadmz/inkwell-markdown.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sajjadmz/inkwell-markdown/issues"
+  },
+  "homepage": "https://github.com/sajjadmz/inkwell-markdown#readme",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "markdown",
+    "wysiwyg",
+    "live preview",
+    "editor",
+    "obsidian",
+    "mermaid",
+    "table",
+    "notes"
+  ],
+  "galleryBanner": {
+    "color": "#1f2a44",
+    "theme": "dark"
+  },
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": false
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [],
+  "contributes": {
+    "customEditors": [
+      {
+        "viewType": "inkwell.editor",
+        "displayName": "Inkwell",
+        "priority": "default",
+        "selector": [
+          {
+            "filenamePattern": "*.md"
+          },
+          {
+            "filenamePattern": "*.markdown"
+          }
+        ]
+      }
+    ],
+    "commands": [
+      {
+        "command": "inkwell.open",
+        "title": "Inkwell: Open",
+        "icon": "$(preview)"
+      },
+      {
+        "command": "inkwell.openInEditor",
+        "title": "Open in Inkwell"
+      },
+      {
+        "command": "inkwell.toggle",
+        "title": "Toggle Inkwell / plain text",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.openAsText",
+        "title": "Open as plain text",
+        "category": "Inkwell",
+        "icon": "$(file-text)"
+      },
+      {
+        "command": "inkwell.toggleOpenByDefault",
+        "title": "Inkwell: Toggle open by default"
+      },
+      {
+        "command": "inkwell.format.bold",
+        "title": "Bold",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.italic",
+        "title": "Italic",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.strike",
+        "title": "Strikethrough",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.link",
+        "title": "Link",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.code",
+        "title": "Inline code",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.bullets",
+        "title": "Bulleted list",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.numbered",
+        "title": "Numbered list",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.checklist",
+        "title": "Checklist",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.quote",
+        "title": "Quote",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.h1",
+        "title": "Heading 1",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.h2",
+        "title": "Heading 2",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.h3",
+        "title": "Heading 3",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.h0",
+        "title": "Normal text",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.codeblock",
+        "title": "Code block",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.highlight",
+        "title": "Highlight (last colour)",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.textcolor",
+        "title": "Text colour (last colour)",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.choosePageStyle",
+        "title": "Choose page style",
+        "category": "Inkwell"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "inkwell.toggle",
+        "key": "ctrl+shift+v",
+        "mac": "cmd+shift+v",
+        "when": "(editorLangId == markdown && activeEditor == workbench.editors.files.textFileEditor) || activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.bold",
+        "key": "ctrl+b",
+        "mac": "cmd+b",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.italic",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.strike",
+        "key": "ctrl+shift+x",
+        "mac": "cmd+shift+x",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.link",
+        "key": "ctrl+k",
+        "mac": "cmd+k",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.code",
+        "key": "ctrl+e",
+        "mac": "cmd+e",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.bullets",
+        "key": "ctrl+shift+8",
+        "mac": "cmd+shift+8",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.numbered",
+        "key": "ctrl+shift+7",
+        "mac": "cmd+shift+7",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.checklist",
+        "key": "ctrl+shift+9",
+        "mac": "cmd+shift+9",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.quote",
+        "key": "ctrl+shift+.",
+        "mac": "cmd+shift+.",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.h1",
+        "key": "ctrl+shift+alt+1",
+        "mac": "cmd+alt+1",
+        "when": "activeCustomEditorId == 'inkwell.editor'",
+        "description": "On Windows/Linux this uses Ctrl+Shift+Alt instead of Ctrl+Alt, because Ctrl+Alt is AltGr on many European keyboard layouts and would block typing characters such as @ { [."
+      },
+      {
+        "command": "inkwell.format.h2",
+        "key": "ctrl+shift+alt+2",
+        "mac": "cmd+alt+2",
+        "when": "activeCustomEditorId == 'inkwell.editor'",
+        "description": "On Windows/Linux this uses Ctrl+Shift+Alt instead of Ctrl+Alt, because Ctrl+Alt is AltGr on many European keyboard layouts and would block typing characters such as @ { [."
+      },
+      {
+        "command": "inkwell.format.h3",
+        "key": "ctrl+shift+alt+3",
+        "mac": "cmd+alt+3",
+        "when": "activeCustomEditorId == 'inkwell.editor'",
+        "description": "On Windows/Linux this uses Ctrl+Shift+Alt instead of Ctrl+Alt, because Ctrl+Alt is AltGr on many European keyboard layouts and would block typing characters such as @ { [."
+      },
+      {
+        "command": "inkwell.format.h0",
+        "key": "ctrl+shift+alt+0",
+        "mac": "cmd+alt+0",
+        "when": "activeCustomEditorId == 'inkwell.editor'",
+        "description": "On Windows/Linux this uses Ctrl+Shift+Alt instead of Ctrl+Alt, because Ctrl+Alt is AltGr on many European keyboard layouts and would block typing characters such as @ { [."
+      },
+      {
+        "command": "inkwell.format.codeblock",
+        "key": "ctrl+shift+alt+c",
+        "mac": "cmd+alt+c",
+        "when": "activeCustomEditorId == 'inkwell.editor'",
+        "description": "On Windows/Linux this uses Ctrl+Shift+Alt instead of Ctrl+Alt, because Ctrl+Alt is AltGr on many European keyboard layouts and would block typing characters such as @ { [."
+      },
+      {
+        "command": "inkwell.format.highlight",
+        "key": "ctrl+shift+h",
+        "mac": "cmd+shift+h",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.textcolor",
+        "key": "ctrl+shift+c",
+        "mac": "cmd+shift+c",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "inkwell.open",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation"
+        },
+        {
+          "command": "inkwell.openAsText",
+          "when": "activeCustomEditorId == inkwell.editor",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "inkwell.openInEditor",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "inkwell.openInEditor",
+          "when": "resourceExtname == .md || resourceExtname == .markdown",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "inkwell.format.bold",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.italic",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.strike",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.link",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.code",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.bullets",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.numbered",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.checklist",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.quote",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.h1",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.h2",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.h3",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.h0",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.codeblock",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.highlight",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.format.textcolor",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Inkwell",
+      "properties": {
+        "inkwell.previewTheme": {
+          "type": "string",
+          "default": "auto",
+          "markdownDescription": "Crossnote preview theme file name (for example `github-light.css`, `one-dark.css`), or `auto` to follow the VS Code colour theme (github-light / github-dark). Use the command **Inkwell: Choose page style** to pick one."
+        },
+        "inkwell.openByDefault": {
+          "type": "boolean",
+          "default": true,
+          "markdownDescription": "Whether `.md` files open in Inkwell by default (the extension registers itself as the default editor for Markdown). Use the command **Inkwell: Toggle open by default** to switch it; it writes `workbench.editorAssociations` only when switching off. Editing this setting by hand does nothing."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "pretest": "npm run build && tsc -p test/tsconfig.json",
+    "test": "node out/test/runTest.js",
+    "package": "npm run build && vsce package --no-dependencies",
+    "snapshot": "npm run pretest && LM_SNAPSHOT=1 LM_GREP=Snapshot node out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@codemirror/commands": "^6.11.1",
+    "@codemirror/lang-markdown": "^6.5.2",
+    "@codemirror/language": "^6.13.1",
+    "@codemirror/language-data": "^6.5.2",
+    "@codemirror/state": "^6.7.6",
+    "@codemirror/view": "^6.43.15",
+    "@lezer/common": "^1.5.6",
+    "@lezer/highlight": "^1.2.5",
+    "@types/markdown-it": "^14.1.0",
+    "@types/mocha": "^10.0.0",
+    "@types/node": "^20.0.0",
+    "@types/prismjs": "^1.26.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^2.4.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "highlight.js": "^11.10.0",
+    "markdown-it": "^14.1.0",
+    "markdown-it-task-lists": "^2.1.1",
+    "mermaid": "^12.3.0",
+    "mocha": "^10.0.0",
+    "playwright": "^1.65.1",
+    "prismjs": "^1.29.0",
+    "typescript": "^5.5.0"
+  }
+}

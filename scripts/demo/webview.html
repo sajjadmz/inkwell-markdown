@@ -1,0 +1,50 @@
+<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style id="theme"></style></head>
+<body class="crossnote"><div id="root"></div>
+<script>
+// Stub of the VS Code webview host. Mirrors src/extension.ts: ready -> theme + init; edit -> apply + ack; setTheme -> theme.
+const q = new URLSearchParams(location.search);
+let setting = q.get('theme') || 'auto';
+let version = 1;
+let text = '';
+const post = (m) => setTimeout(() => window.dispatchEvent(new MessageEvent('message', { data: m })), 0);
+const THEMES = ['atom-dark.css','atom-light.css','atom-material.css','github-dark.css','github-light.css','github.css','gothic.css','medium.css','monokai.css','newsprint.css','night.css','none.css','one-dark.css','one-light.css','solarized-dark.css','solarized-light.css','vscode.css','vue.css'];
+const get = async (u) => { try { const r = await fetch(u); return r.ok ? await r.text() : ''; } catch { return ''; } };
+async function themeCss() {
+  const dark = q.get('dark') === '1';
+  let pt = setting === 'auto' ? (dark ? 'github-dark.css' : 'github-light.css') : setting;
+  const base = pt.replace(/\.css$/, '');
+  const prism = [base, base.replace(/-light$/, ''), dark ? 'github-dark' : 'github'];
+  let pr = 'github';
+  for (const c of prism) { if (await get('/dist/styles/live/prism_theme/' + c + '.css')) { pr = c; break; } }
+  return (await get('/dist/styles/live/prism_theme/' + pr + '.css')) + '\n' + (await get('/dist/styles/live/preview_theme/' + pt));
+}
+async function sendTheme() { post({ type: 'theme', css: await themeCss(), themes: THEMES, current: setting }); }
+function offset(t, line, ch) { const ls = t.split('\n'); let o = 0; for (let i = 0; i < line; i++) o += ls[i].length + 1; return o + ch; }
+window.__doc = () => text;
+window.acquireVsCodeApi = () => ({
+  getState: () => null, setState: () => {},
+  postMessage: async (m) => {
+    switch (m.type) {
+      case 'ready': {
+        text = await get('/scripts/demo/' + (q.get('doc') || 'notes.md'));
+        await sendTheme();
+        post({ type: 'init', text, version, baseUri: location.origin + '/scripts/demo/' });
+        break;
+      }
+      case 'edit': {
+        const cs = m.changes.map((c) => ({ a: offset(text, c.fromLine, c.fromCh), b: offset(text, c.toLine, c.toCh), s: c.insert })).sort((x, y) => y.a - x.a);
+        for (const c of cs) text = text.slice(0, c.a) + c.s + text.slice(c.b);
+        version += 1;
+        post({ type: 'ack', version });
+        break;
+      }
+      case 'needResync': post({ type: 'resync', text, version }); break;
+      case 'setTheme': setting = m.value; sendTheme(); break;
+      case 'undo': case 'redo': case 'openAsText': case 'openLink': case 'log': break;
+    }
+  },
+});
+</script>
+<script src="/dist/webview.js"></script></body></html>

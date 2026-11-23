@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b3a67"/><stop offset="1" stop-color="#151c33"/></linearGradient></defs>
+  <rect width="128" height="128" rx="24" fill="url(#bg)"/>
+  <!-- quill -->
+  <path d="M96 14C74 20 58 38 50 66l8 6C74 60 90 40 96 14z" fill="#f4efe3"/>
+  <path d="M96 14C84 34 70 52 54 69" fill="none" stroke="#8aa4e8" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M50 66l-8 14 12-6z" fill="#f4efe3"/>
+  <!-- ink pot -->
+  <path d="M30 84c0-6 6-10 14-10h22c8 0 14 4 14 10v22c0 6-6 10-14 10H44c-8 0-14-4-14-10z" fill="#f4efe3"/>
+  <rect x="38" y="68" width="34" height="8" rx="3" fill="#8aa4e8"/>
+  <!-- M down arrow -->
+  <text x="48" y="104" font-family="Helvetica, Arial, sans-serif" font-weight="700" font-size="25" fill="#1f2a44" text-anchor="middle">M↓</text>
+</svg>
