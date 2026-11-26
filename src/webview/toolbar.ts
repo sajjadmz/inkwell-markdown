@@ -23,6 +23,8 @@ const ICON: Record<string, string> = {
   bullets: svg('<circle cx="3" cy="4" r=".8" fill="currentColor"/><circle cx="3" cy="8" r=".8" fill="currentColor"/><circle cx="3" cy="12" r=".8" fill="currentColor"/><path d="M6.5 4h7M6.5 8h7M6.5 12h7"/>'),
   numbered: svg('<text x="1" y="5.5" font-size="5" fill="currentColor" stroke="none">1</text><text x="1" y="9.5" font-size="5" fill="currentColor" stroke="none">2</text><text x="1" y="13.5" font-size="5" fill="currentColor" stroke="none">3</text><path d="M6.5 4h7M6.5 8h7M6.5 12h7"/>'),
   checklist: svg('<rect x="1.8" y="2.5" width="3.4" height="3.4" rx=".6"/><path d="m2.5 4.3.8.8 1.4-1.6M6.5 4.2h7M6.5 9h7M6.5 13h7"/><rect x="1.8" y="7.3" width="3.4" height="3.4" rx=".6"/>'),
+  outdent: svg('<path d="M2 3.5h12M7 6.5h7M7 9.5h7M2 12.5h12M5 6l-3 2 3 2"/>'),
+  indent: svg('<path d="M2 3.5h12M7 6.5h7M7 9.5h7M2 12.5h12M2 6l3 2-3 2"/>'),
   quote: svg('<path d="M3 4v8M6.5 5h7M6.5 8h7M6.5 11h5"/>'),
   codeblock: svg('<rect x="1.8" y="2.5" width="12.4" height="11" rx="1.5"/><path d="m5.5 6.2-1.8 1.8 1.8 1.8M10.5 6.2l1.8 1.8-1.8 1.8"/>'),
   table: svg('<rect x="1.8" y="2.5" width="12.4" height="11" rx="1.2"/><path d="M1.8 6.5h12.4M1.8 10h12.4M6 2.5v11M10.2 2.5v11"/>'),
@@ -42,6 +44,7 @@ const k = keyLabel;
 const TIP: Record<string, string> = {
   bold: `Bold (${k('B')})`, italic: `Italic (${k('I')})`, strike: `Strikethrough (${k('X', { shift: true })})`, code: `Inline code (${k('E')})`, link: `Link (${k('K')})`,
   bullets: `Bulleted list (${k('8', { shift: true })})`, numbered: `Numbered list (${k('7', { shift: true })})`, checklist: `Checklist (${k('9', { shift: true })})`, quote: `Quote (${k('.', { shift: true })})`,
+  outdent: `Decrease indent (${k('[')})`, indent: `Increase indent (${k(']')})`,
   codeblock: `Code block (${k('C', { alt: true })})`, table: 'Insert table (3 × 2)', hr: 'Horizontal rule', plain: `Open as plain text (${k('V', { shift: true })})`,
 };
 
@@ -88,7 +91,7 @@ export class Toolbar {
     this.colourButton('highlight', 'Highlighter', HIGHLIGHTS, 'highlight', `Highlighter (${k('H', { shift: true })})`);
     this.plainBtn('code'); this.plainBtn('link');
     this.sep();
-    for (const n of ['bullets', 'numbered', 'checklist', 'quote']) this.plainBtn(n);
+    for (const n of ['bullets', 'numbered', 'checklist', 'outdent', 'indent', 'quote']) this.plainBtn(n);
     this.sep();
     this.plainBtn('codeblock');
     const cb = this.btn('codeblock-lang', ICON.caret, 'Code block language', (b) => this.openMenu(b, LANGUAGES.map((l) => ({ label: l, run: () => this.host.run('codeblock', l) }))), 'lm-caret');
@@ -98,7 +101,7 @@ export class Toolbar {
     dg.dataset.menu = '1';
     this.plainBtn('hr');
     this.sep();
-    const pg = this.btn('page', ICON.page + ICON.caret, 'Page style', (b) => this.openMenu(b, [{ label: 'Auto (follow VS Code)', run: () => this.host.setTheme('auto'), checked: this.currentTheme === 'auto' },
+    const pg = this.btn('page', ICON.page + ICON.caret, 'Page style: your choice becomes the default for every file', (b) => this.openMenu(b, [{ label: 'Auto (follow VS Code)', run: () => this.host.setTheme('auto'), checked: this.currentTheme === 'auto' },
       ...this.themes.map((t) => ({ label: t.replace(/\.css$/, ''), run: () => this.host.setTheme(t), checked: t === this.currentTheme }))]), 'lm-wide');
     pg.dataset.menu = '1';
     this.plainBtn('plain');

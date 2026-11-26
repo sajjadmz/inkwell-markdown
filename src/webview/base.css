@@ -93,8 +93,11 @@
 .cm-lm-del { text-decoration: line-through; }
 .cm-lm-link { cursor: pointer; }
 .cm-lm-mark { opacity: .45; }
-.lm-bullet { display: inline-block; width: 1em; text-align: left; }
-.lm-checkbox { margin: 0 .3em .25em 0; vertical-align: middle; cursor: pointer; }
+.lm-bullet, .lm-mbox, .lm-wsbox { display: inline-block; text-indent: 0; white-space: pre; overflow: clip; }
+.lm-bullet { width: 1.4em; text-align: left; }
+.lm-checkbox { font-size: inherit; box-sizing: border-box; width: 1em; height: 1em; margin: 0 .4em .25em 0; vertical-align: middle; cursor: pointer; }
 .lm-imgwrap { display: flow-root; margin: 0; padding: 4px 0 16px; }
 .lm-imgwrap img { max-width: 100%; }
 .lm-imgmissing { opacity: .6; font-style: italic; }
+
+.lm-toast { position: fixed; z-index: 120; max-width: 360px; padding: 8px 12px; border-radius: 6px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; color: #fff; background: rgba(32, 33, 36, .94); box-shadow: 0 4px 14px rgba(0,0,0,.3); pointer-events: none; }

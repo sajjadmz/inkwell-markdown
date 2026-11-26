@@ -38,11 +38,11 @@ suite('Adversarial 3: table cells', () => {
     a.forEach((l, i) => { if (!except.includes(i)) assert.strictEqual(b[i], l, `line ${i} was reformatted`); });
   };
 
-  test('pasted multi-line text becomes one line; no other row changes', async () => {
+  test('pasted multi-line text stays in its cell as <br> line breaks; no other row changes', async () => {
     const { uri, doc, file } = await open(T);
     await tbl(uri, { r: 1, c: 0, text: 'l1\nl2\r\nl3' });
     onlyLine(T, doc.getText(), [2]);
-    assert.strictEqual(lines(doc.getText())[2], '| l1 l2 l3    | 2 |');
+    assert.strictEqual(lines(doc.getText())[2], '| l1<br>l2<br>l3    | 2 |');
     await closeTab(file);
   });
 

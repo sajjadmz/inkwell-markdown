@@ -1,0 +1,14 @@
+import { serve, open } from '../demo/lib.mjs';
+const { server, base } = await serve();
+const s = await open(base, { doc: 'probe-table.md', theme: 'github-light.css' });
+const { page } = s; const f = page.frameLocator('#wv'); const fr = page.frames().find((x) => x.url().includes('webview.html'));
+const doc = () => fr.evaluate(() => window.__doc());
+const cell = f.locator('td', { hasText: 'Ask for' });
+const b = await cell.boundingBox(); await page.mouse.click(b.x + b.width - 5, b.y + b.height / 2); await page.waitForTimeout(300);
+console.log('active:', await fr.evaluate(() => { const a = document.activeElement; const s = getSelection(); return a.tagName + ' caret=' + s.anchorOffset + '/' + (a.textContent||'').length; }));
+await page.keyboard.press('Enter'); await page.waitForTimeout(300);
+console.log('after Enter:', JSON.stringify((await doc()).split('\n')[4]));
+console.log('active:', await fr.evaluate(() => { const a = document.activeElement; return a.tagName + ' ' + (a.textContent||'').slice(0,40); }));
+await page.keyboard.type('new line'); await page.waitForTimeout(300);
+console.log('after typing:', JSON.stringify((await doc()).split('\n')[4]));
+await s.ctx.close(); await s.browser.close(); server.close();

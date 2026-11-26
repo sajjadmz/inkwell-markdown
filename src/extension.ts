@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'node:path';
 import { loadTheme, listThemes } from './theme';
 import { openLink } from './links';
+import { checkPicture, pictureBase, pictureFileName, pictureMarkdown, NOTE_SAVE_FIRST } from './pictures';
 
 const VIEW_TYPE = 'inkwell.editor';
 
@@ -48,6 +49,44 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
     ctx.subscriptions.push(vscode.workspace.onDidChangeTextDocument((e) => this.onDocChanged(e)), this.out);
   }
 
+  private pictureChain: Promise<void> = Promise.resolve();
+
+  /** Saves one pasted / dropped picture next to the note and tells the page what to insert. One at a time, so two pictures never pick the same name. */
+  private savePicture(s: Session, document: vscode.TextDocument, m: { id?: unknown; ext?: unknown; data?: unknown }): void {
+    const id = m.id;
+    if (typeof id !== 'number') return;
+    const reply = (r: object) => { void s.webview.postMessage({ type: 'pictureResult', id, ...r }); };
+    this.pictureChain = this.pictureChain.then(async () => {
+      try {
+        if (document.isUntitled || document.uri.scheme === 'untitled') { reply({ ok: false, error: NOTE_SAVE_FIRST }); return; }
+        const c = checkPicture(m);
+        if (!c.ok) { reply({ ok: false, error: c.error }); return; }
+        const dir = vscode.Uri.joinPath(document.uri, '..', 'images');
+        await vscode.workspace.fs.createDirectory(dir);
+        const base = pictureBase(document.uri.path); const when = new Date();
+        for (let n = 1; n < 10000; n++) {
+          const name = pictureFileName(base, when, c.ext, n);
+          const target = vscode.Uri.joinPath(dir, name);
+          let exists = true;
+          try { await vscode.workspace.fs.stat(target); } catch { exists = false; }
+          if (exists) continue; // never overwrite
+          await vscode.workspace.fs.writeFile(target, c.bytes);
+          reply({ ok: true, md: pictureMarkdown(`images/${name}`), file: name });
+          return;
+        }
+        reply({ ok: false, error: 'Could not find a free file name for the picture.' });
+      } catch (e) {
+        this.log(`savePicture failed: ${String(e)}`);
+        reply({ ok: false, error: `The picture could not be saved: ${e instanceof Error ? e.message : String(e)}` });
+      }
+    });
+  }
+
+  private sendConfig(webview: vscode.Webview): void {
+    const v = vscode.workspace.getConfiguration('inkwell').get<string>('doubleSpacePeriod', 'auto');
+    void webview.postMessage({ type: 'config', doubleSpacePeriod: v === 'on' || v === 'off' ? v : 'auto' });
+  }
+
   private log(s: string): void { this.out.appendLine(`${new Date().toISOString()} ${s}`); }
 
   /** Scroll open viewers of `uri` to a heading id (or remember it until the viewer is ready). */
@@ -91,6 +130,9 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
 
   /** A formatting shortcut (package.json keybinding) was pressed: tell the focused Inkwell webview. */
   format(action: string): void { if (this.activeSession?.ready) void this.activeSession.webview.postMessage({ type: 'format', action }); }
+
+  /** inkwell.find / replace / findNext / findPrevious (package.json keybindings): the same actions as the webview's own keys, for when VS Code got the key first. */
+  find(action: 'find' | 'replace' | 'next' | 'prev'): void { if (this.activeSession?.ready) void this.activeSession.webview.postMessage({ type: 'find', action }); }
 
   /** inkwell.undo / inkwell.redo (package.json keybindings): run CodeMirror's history in the focused Inkwell webview. */
   history(action: 'undo' | 'redo'): void { if (this.activeSession?.ready) void this.activeSession.webview.postMessage({ type: 'history', action }); }
@@ -244,7 +286,7 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
         switch (m.type) {
           case 'ready': {
             session.ready = true; session.version = document.version;
-            void sendTheme();
+            void sendTheme(); this.sendConfig(webview);
             void webview.postMessage({ type: 'init', text: document.getText(), version: document.version, baseUri });
             const f = this.pending.get(key);
             if (f) { this.pending.delete(key); void webview.postMessage({ type: 'scroll', fragment: f }); }
@@ -255,6 +297,7 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
           case 'edit': this.inbound(session, () => { if (session.ready) void this.handleEdit(session, document, m as { base?: unknown; changes?: unknown }); }); break;
           case 'needResync': this.inbound(session, () => { if (session.ready) this.resync(session, document, `webview asked: ${String(m.reason)}`); }); break;
           case 'notice': if (typeof m.text === 'string') void vscode.window.showInformationMessage(`Inkwell: ${m.text}`); break;
+          case 'pastePicture': this.savePicture(session, document, m as { id?: unknown; ext?: unknown; data?: unknown }); break;
           case 'log': this.log(`webview: ${String(m.text)}`); break;
           case 'openAsText': void vscode.commands.executeCommand('inkwell.openAsText', document.uri); break;
           case 'setTheme':
@@ -268,7 +311,7 @@ class InkwellProvider implements vscode.CustomTextEditorProvider {
       }),
       panel.onDidChangeViewState((e) => { if (e.webviewPanel.active) this.activeSession = session; else if (this.activeSession === session) this.activeSession = undefined; }),
       vscode.window.onDidChangeActiveColorTheme(sendTheme),
-      vscode.workspace.onDidChangeConfiguration((e) => { if (e.affectsConfiguration('inkwell.previewTheme')) void sendTheme(); }),
+      vscode.workspace.onDidChangeConfiguration((e) => { if (e.affectsConfiguration('inkwell.previewTheme')) void sendTheme(); if (e.affectsConfiguration('inkwell.doubleSpacePeriod') && session.ready) this.sendConfig(webview); }),
     ];
     panel.onDidDispose(() => { if (this.activeSession === session) this.activeSession = undefined; subs.forEach((s) => s.dispose()); session.edited.dispose(); this.sessions.get(key)?.delete(session); });
   }
@@ -307,7 +350,7 @@ async function choosePageStyle(dist: string): Promise<void> {
   if (pick) await cfg.update('previewTheme', pick.value, vscode.ConfigurationTarget.Global);
 }
 
-const FORMAT_ACTIONS = ['bold', 'italic', 'strike', 'link', 'code', 'bullets', 'numbered', 'checklist', 'quote', 'h1', 'h2', 'h3', 'h0', 'codeblock', 'highlight', 'textcolor'];
+const FORMAT_ACTIONS = ['bold', 'italic', 'strike', 'link', 'code', 'bullets', 'numbered', 'checklist', 'indent', 'outdent', 'quote', 'h1', 'h2', 'h3', 'h0', 'codeblock', 'highlight', 'textcolor'];
 const toUri = (u: vscode.Uri | string): vscode.Uri => (typeof u === 'string' ? vscode.Uri.file(u) : u);
 
 function registerDebugCommands(ctx: vscode.ExtensionContext, p: InkwellProvider): void {
@@ -365,6 +408,10 @@ export function activate(ctx: vscode.ExtensionContext): void {
     }),
     vscode.commands.registerCommand('inkwell.toggleOpenByDefault', toggleOpenByDefault),
     ...FORMAT_ACTIONS.map((a) => vscode.commands.registerCommand(`inkwell.format.${a}`, () => provider.format(a))),
+    vscode.commands.registerCommand('inkwell.find', () => provider.find('find')),
+    vscode.commands.registerCommand('inkwell.replace', () => provider.find('replace')),
+    vscode.commands.registerCommand('inkwell.findNext', () => provider.find('next')),
+    vscode.commands.registerCommand('inkwell.findPrevious', () => provider.find('prev')),
     vscode.commands.registerCommand('inkwell.undo', () => provider.history('undo')),
     vscode.commands.registerCommand('inkwell.redo', () => provider.history('redo')),
     vscode.commands.registerCommand('inkwell.choosePageStyle', () => choosePageStyle(path.join(ctx.extensionPath, 'dist'))),

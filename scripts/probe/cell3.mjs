@@ -1,0 +1,25 @@
+// Real-key probes of formatting inside a table cell.
+import { serve, open } from '../demo/lib.mjs';
+const { server, base } = await serve();
+const s = await open(base, { doc: 'probe-table.md', theme: 'github-light.css' });
+const { page } = s; const f = page.frameLocator('#wv'); const fr = page.frames().find((x) => x.url().includes('webview.html'));
+const row = async () => (await fr.evaluate(() => window.__doc())).split('\n')[5];
+const sel = () => fr.evaluate(() => getSelection().toString());
+const shown = () => fr.evaluate(() => document.activeElement.textContent);
+const cell = f.locator('td', { hasText: 'Start the two' });
+await cell.click(); await page.waitForTimeout(200);
+const selectText = (w) => fr.evaluate((w) => { const c = document.activeElement; const tn = c.firstChild; const i = tn.data.indexOf(w); const r = document.createRange(); r.setStart(tn, i); r.setEnd(tn, i + w.length); getSelection().removeAllRanges(); getSelection().addRange(r); }, w);
+const step = async (label, keys) => { for (const k of keys) { await page.keyboard.press(k); await page.waitForTimeout(150); } console.log(label.padEnd(26), JSON.stringify(await row()), '| sel:', JSON.stringify(await sel())); };
+await selectText('two months');
+await step('Cmd+B', ['Meta+b']);
+await step('Cmd+I (stack)', ['Meta+i']);
+await step('Cmd+B again (remove bold)', ['Meta+b']);
+await step('Cmd+I again (remove ital)', ['Meta+i']);
+await step('Cmd+Z', ['Meta+z']); await step('Cmd+Z', ['Meta+z']);
+await step('Cmd+Shift+Z', ['Meta+Shift+z']);
+await page.keyboard.press('ArrowRight'); await page.keyboard.press('Meta+ArrowRight');
+await step('Enter + text', ['Enter', 'H', 'i']);
+console.log('cell shows:', JSON.stringify(await shown()));
+await page.keyboard.press('Escape'); await page.waitForTimeout(300);
+console.log('rendered:', await f.locator('td', { hasText: 'Start' }).innerHTML());
+await s.ctx.close(); await s.browser.close(); server.close();

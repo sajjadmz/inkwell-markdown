@@ -2,7 +2,7 @@
   "name": "inkwell-markdown",
   "displayName": "Inkwell Markdown",
   "description": "Edit markdown directly in a beautiful rendered page: Obsidian-style live preview, Markdown Preview Enhanced themes, a Word-style toolbar and shortcuts.",
-  "version": "0.6.0",
+  "version": "0.8.0",
   "publisher": "sajjadmotamed",
   "license": "MIT",
   "icon": "images/icon.png",
@@ -124,6 +124,16 @@
         "category": "Inkwell"
       },
       {
+        "command": "inkwell.format.indent",
+        "title": "Increase indent",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.format.outdent",
+        "title": "Decrease indent",
+        "category": "Inkwell"
+      },
+      {
         "command": "inkwell.format.quote",
         "title": "Quote",
         "category": "Inkwell"
@@ -175,6 +185,26 @@
       {
         "command": "inkwell.redo",
         "title": "Inkwell: Redo"
+      },
+      {
+        "command": "inkwell.find",
+        "title": "Find",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.replace",
+        "title": "Replace",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.findNext",
+        "title": "Find next",
+        "category": "Inkwell"
+      },
+      {
+        "command": "inkwell.findPrevious",
+        "title": "Find previous",
+        "category": "Inkwell"
       }
     ],
     "keybindings": [
@@ -239,6 +269,18 @@
         "when": "activeCustomEditorId == 'inkwell.editor'"
       },
       {
+        "command": "inkwell.format.indent",
+        "key": "ctrl+]",
+        "mac": "cmd+]",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.format.outdent",
+        "key": "ctrl+[",
+        "mac": "cmd+[",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
         "command": "inkwell.format.h1",
         "key": "ctrl+shift+alt+1",
         "mac": "cmd+alt+1",
@@ -300,6 +342,30 @@
       {
         "command": "inkwell.redo",
         "key": "ctrl+y",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.find",
+        "key": "ctrl+f",
+        "mac": "cmd+f",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.replace",
+        "key": "ctrl+h",
+        "mac": "cmd+alt+f",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.findNext",
+        "key": "f3",
+        "mac": "cmd+g",
+        "when": "activeCustomEditorId == 'inkwell.editor'"
+      },
+      {
+        "command": "inkwell.findPrevious",
+        "key": "shift+f3",
+        "mac": "cmd+shift+g",
         "when": "activeCustomEditorId == 'inkwell.editor'"
       }
     ],
@@ -402,6 +468,22 @@
         {
           "command": "inkwell.redo",
           "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.find",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.replace",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.findNext",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
+        },
+        {
+          "command": "inkwell.findPrevious",
+          "when": "activeCustomEditorId == 'inkwell.editor'"
         }
       ]
     },
@@ -411,12 +493,69 @@
         "inkwell.previewTheme": {
           "type": "string",
           "default": "auto",
-          "markdownDescription": "Crossnote preview theme file name (for example `github-light.css`, `one-dark.css`), or `auto` to follow the VS Code colour theme (github-light / github-dark). Use the command **Inkwell: Choose page style** to pick one."
+          "enum": [
+            "auto",
+            "atom-dark.css",
+            "atom-light.css",
+            "atom-material.css",
+            "github-dark.css",
+            "github-light.css",
+            "github.css",
+            "gothic.css",
+            "medium.css",
+            "monokai.css",
+            "newsprint.css",
+            "night.css",
+            "none.css",
+            "one-dark.css",
+            "one-light.css",
+            "solarized-dark.css",
+            "solarized-light.css",
+            "vscode.css",
+            "vue.css"
+          ],
+          "enumItemLabels": [
+            "Auto (follow VS Code)",
+            "atom-dark",
+            "atom-light",
+            "atom-material",
+            "github-dark",
+            "github-light",
+            "github",
+            "gothic",
+            "medium",
+            "monokai",
+            "newsprint",
+            "night",
+            "none",
+            "one-dark",
+            "one-light",
+            "solarized-dark",
+            "solarized-light",
+            "vscode",
+            "vue"
+          ],
+          "markdownDescription": "The page style every Markdown file opens with. `auto` follows the VS Code colour theme (github-light / github-dark). Choosing a style from the toolbar's page style button also changes this default. Crossnote preview theme file name (for example `github-light.css`, `one-dark.css`), or `auto` to follow the VS Code colour theme (github-light / github-dark). Use the command **Inkwell: Choose page style** to pick one."
         },
         "inkwell.openByDefault": {
           "type": "boolean",
           "default": true,
           "markdownDescription": "Whether `.md` files open in Inkwell by default (the extension registers itself as the default editor for Markdown). Use the command **Inkwell: Toggle open by default** to switch it; it writes `workbench.editorAssociations` only when switching off. Editing this setting by hand does nothing."
+        },
+        "inkwell.doubleSpacePeriod": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "on",
+            "off"
+          ],
+          "enumItemLabels": [
+            "Auto (on for macOS, off elsewhere)",
+            "On",
+            "Off"
+          ],
+          "markdownDescription": "Typing a space right after \"word \" turns the two spaces into a full stop and a space (\". \"), like the macOS habit. Works in normal text, headings, lists, quotes and table cells, never in code, links or front matter. `auto` is on for macOS and off elsewhere. One Undo gives the two spaces back."
         }
       }
     }

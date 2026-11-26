@@ -42,4 +42,24 @@ suite('Page style', () => {
       await wb.update('colorTheme', oldTheme, vscode.ConfigurationTarget.Global);
     }
   });
+  test('picking a page style from the toolbar menu changes the page', async () => {
+    const lm = vscode.workspace.getConfiguration('inkwell');
+    const old = lm.inspect<string>('previewTheme')?.globalValue;
+    const file = path.join(tmp, 'menu.md');
+    fs.copyFileSync(path.join(FIXTURES, 'lf.md'), file);
+    const ask = (u: vscode.Uri, type: string, extra: object = {}) => vscode.commands.executeCommand<any>('inkwell._debugAsk', u, type, extra);
+    try {
+      await lm.update('previewTheme', 'github-light.css', vscode.ConfigurationTarget.Global);
+      const { uri } = await openLive(file);
+      assert.strictEqual(await bg(uri), 'rgb(255, 255, 255)');
+      await vscode.commands.executeCommand('inkwell._debugAction', uri, 'page');
+      const r = await ask(uri, 'debugMenuPick', { label: 'one-dark' });
+      assert.ok(r.found, 'one-dark is in the menu: ' + JSON.stringify(r.labels));
+      for (let i = 0; i < 40 && vscode.workspace.getConfiguration('inkwell').get('previewTheme') !== 'one-dark.css'; i++) await new Promise((res) => setTimeout(res, 100));
+      assert.strictEqual(vscode.workspace.getConfiguration('inkwell').get('previewTheme'), 'one-dark.css', 'setting saved');
+      await new Promise((res) => setTimeout(res, 400));
+      assert.notStrictEqual(await bg(uri), 'rgb(255, 255, 255)', 'page repainted dark');
+      await closeTab(file);
+    } finally { await lm.update('previewTheme', old, vscode.ConfigurationTarget.Global); }
+  });
 });

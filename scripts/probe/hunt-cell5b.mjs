@@ -1,0 +1,13 @@
+import { start } from './hunt-lib.mjs';
+const H = await start('probe-hunt3.md');
+const TL = async () => (await H.lines()).filter((l) => l.startsWith('|'));
+const show = async (l, n=2) => { console.log(l.padEnd(30), JSON.stringify((await TL())[n]), '| sel:', JSON.stringify(await H.cellSel())); await H.check(l); };
+await H.cell('plain').click(); await H.wait(200);
+await H.caretCell(2); await H.key('Meta+k'); await show('Cmd+K empty selection');
+await H.key('Meta+k'); await show('Cmd+K again (toggle off)');
+await H.key('Meta+z'); await H.key('Meta+z');
+await H.selectCell('plain'); await H.key('Meta+k'); await show('link');
+await H.selectCell('plain'); await H.key('Meta+k'); await show('link again on text');
+await H.key('Meta+z'); await H.key('Meta+z'); await show('undo x2');
+await H.caretCell(2); await H.key('Meta+b'); await show('caret in word bold');
+await H.close();

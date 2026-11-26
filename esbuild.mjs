@@ -21,6 +21,18 @@ await build({
   entryPoints: ['src/webview/table.ts'], outfile: 'dist/table.js', bundle: true,
   platform: 'node', format: 'cjs', target: 'node18', // used by the tests (cell escaping property test)
 });
+await build({
+  entryPoints: ['src/webview/listedit.ts'], outfile: 'dist/listedit.js', bundle: true,
+  platform: 'node', format: 'cjs', target: 'node18', external: ['@codemirror/*', '@lezer/*'], // used by the tests (list editing and renumbering on plain editor states)
+});
+await build({
+  entryPoints: ['src/webview/celllist.ts'], outfile: 'dist/celllist.js', bundle: true,
+  platform: 'node', format: 'cjs', target: 'node18', // used by the tests (lists inside table cells)
+});
+await build({
+  entryPoints: ['src/pictures.ts'], outfile: 'dist/pictures.js', bundle: true,
+  platform: 'node', format: 'cjs', target: 'node18', // used by the tests (picture validation and naming)
+});
 const wv = await build({
   entryPoints: ['src/webview/main.ts'], outfile: 'dist/webview.js', bundle: true,
   platform: 'browser', format: 'iife', minify: true, metafile: true, legalComments: 'none', target: 'es2022', loader: { '.css': 'text' },

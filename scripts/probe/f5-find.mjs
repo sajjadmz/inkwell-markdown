@@ -1,0 +1,21 @@
+// F5 browser harness: drives the find bar with real keyboard input on the demo page.
+import fs from 'node:fs'; import path from 'node:path';
+import { serve, open, ROOT } from '../demo/lib.mjs';
+const { server, base } = await serve();
+const out = path.join(ROOT, 'scripts/probe/out'); fs.mkdirSync(out, { recursive: true });
+const dark = process.argv.includes('dark'); const narrow = process.argv.includes('narrow');
+const s = await open(base, { doc: 'probe-find.md', theme: dark ? 'github-dark.css' : 'github-light.css', dark });
+const { page } = s; const fr = page.frames().find((x) => x.url().includes('webview.html'));
+if (narrow) await page.setViewportSize({ width: 420, height: 800 });
+const info = () => fr.evaluate(() => window.__findbar.info);
+await fr.evaluate(() => window.__view.focus());
+await page.keyboard.press('Meta+f'); await page.waitForTimeout(300);
+await page.keyboard.type('two months'); await page.waitForTimeout(400);
+console.log(JSON.stringify(await info()));
+await page.screenshot({ path: path.join(out, `f5-find${dark ? '-dark' : ''}${narrow ? '-narrow' : ''}.png`) });
+await page.keyboard.press('Enter'); await page.waitForTimeout(200); console.log((await info()).counter);
+await page.keyboard.press('Shift+Enter'); await page.keyboard.press('Shift+Enter'); await page.waitForTimeout(200); console.log((await info()).counter);
+await page.keyboard.press('Meta+Alt+f'); await page.waitForTimeout(300);
+await page.screenshot({ path: path.join(out, `f5-replace${dark ? '-dark' : ''}${narrow ? '-narrow' : ''}.png`) });
+console.log(JSON.stringify(await info()));
+await s.browser.close(); server.close();

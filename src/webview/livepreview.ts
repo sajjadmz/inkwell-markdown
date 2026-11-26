@@ -3,11 +3,15 @@
 import { EditorState, StateEffect, StateField, type ChangeSpec, type Range } from '@codemirror/state';
 import { setTip } from './tooltip';
 import { Decoration, EditorView, WidgetType, type DecorationSet } from '@codemirror/view';
+import { isolateHistory } from '@codemirror/commands';
 import { ensureSyntaxTree, syntaxTree } from '@codemirror/language';
-import type { SyntaxNodeRef } from '@lezer/common';
+import type { SyntaxNode, SyntaxNodeRef } from '@lezer/common';
 import MarkdownIt from 'markdown-it';
 import { MermaidWidget } from './mermaidwidget';
 import { findColourPairs } from './format';
+import { frontMatter } from './findcore';
+import { cellEnter, cellBackspace, type CellEdit } from './celllist';
+import { doubleSpaceOn, cellPeriodPlan } from './spaces';
 import { parseTable, rowIndex, addRow, deleteRow, addColumn, deleteColumn, setAlign, unescapeCell, escapeCell, endsWithBackslash, alignOf, type Row, type Align } from './table';
 
 /** Hooks main.ts fills in so the editable table cells can use VS Code's undo/redo. */
@@ -137,7 +141,11 @@ function runOp(op: string): void {
 }
 
 function hideBar(): void { if (barEl) barEl.hidden = true; }
-/** Puts the bar just above the focused cell's row (below it when there is no room), never over the row, inside the viewport. */
+/**
+ * Puts the bar above the table (below it when there is no room), so it never covers a row: a click on a cell in any row,
+ * including the one above the active cell, always reaches that cell. Only when the table fills the whole view does the bar
+ * sit at the top or bottom edge of the view, on the side away from the active row.
+ */
 function placeBar(): void {
   if (!barEl) return;
   if (!ctx || !ctx.cell.isConnected || !ctx.d.contains(document.activeElement)) { hideBar(); return; }
@@ -148,10 +156,13 @@ function placeBar(): void {
   barEl.style.maxWidth = `${window.innerWidth - 16}px`;
   const bw = barEl.offsetWidth, bh = barEl.offsetHeight, gap = 6;
   const tr = ctx.d.querySelector('table')!.getBoundingClientRect();
-  let top = row.top - bh - gap;
-  if (top < topLimit + 2) top = row.bottom + gap;
-  if (top + bh > window.innerHeight - 2) top = Math.max(topLimit + 2, Math.min(row.top - bh - gap, window.innerHeight - bh - 2));
-  let left = Math.max(8, Math.min(tr.left, window.innerWidth - bw - 8));
+  const minTop = topLimit + 2, maxTop = window.innerHeight - bh - 2;
+  let top = tr.top - bh - gap;
+  if (top < minTop) {
+    top = tr.bottom + gap;
+    if (top > maxTop) top = row.top - minTop > maxTop - row.top ? minTop : maxTop; // the farther edge from the active row
+  }
+  const left = Math.max(8, Math.min(tr.left, window.innerWidth - bw - 8));
   barEl.style.top = `${Math.round(top)}px`; barEl.style.left = `${Math.round(left)}px`;
 }
 
@@ -184,7 +195,52 @@ function placeHandles(d: HTMLElement): void {
   if (hc) { hc.style.left = `${right - 9}px`; hc.style.top = `${t.offsetTop + t.offsetHeight / 2 - 11}px`; }
 }
 
-function cellHtml(raw: string): string { return md.renderInline(raw); }
+/**
+ * Cell HTML: markdown-it with html off (so nothing unsafe gets through), then only exact, attribute-free formatting
+ * tags (<br>, <b>, <i>, <u>, ...) and the canonical colour tags with a validated value are turned back into markup.
+ */
+const CELL_TAGS = 'b|strong|i|em|u|ins|s|del|strike|sub|sup|small|kbd|cite';
+const HEX_RE = '#[0-9a-fA-F]{3,8}', RGBA_RE = 'rgba\\(\\d{1,3},\\d{1,3},\\d{1,3},(?:0|1|0?\\.\\d+|1\\.0+)\\)';
+/** While a cell is edited it shows its source with each <br> as a real line break; saving turns them back into <br>. */
+/** Set by a toolbar/shortcut format action in a cell, so that change is its own Undo step (like Word). */
+let cellFormatPending = false;
+export function markCellFormat(): void { cellFormatPending = true; }
+// A trailing newline in an editable block is invisible unless doubled, and the browser adds that extra one itself
+// when Enter is pressed at the end. So one final "\n" is never content: drop it on the way out, add it on the way in.
+export const toEdit = (src: string): string => src.replace(/<br>/g, '\n') + (src.endsWith('<br>') ? '\n' : '');
+export const fromEdit = (text: string): string => text.replace(/\r\n/g, '\n').replace(/\n$/, '').replace(/\n/g, '<br>');
+function cellHtml(raw: string): string {
+  return md.renderInline(raw)
+    .replace(/&lt;br\s*\/?&gt;/gi, '<br>')
+    .replace(new RegExp(`&lt;(/?)(${CELL_TAGS})&gt;`, 'gi'), '<$1$2>')
+    .replace(new RegExp(`&lt;span style=&quot;color:(${HEX_RE})&quot;&gt;`, 'g'), '<span style="color:$1">')
+    .replace(new RegExp(`&lt;mark style=&quot;background:(${RGBA_RE})&quot;&gt;`, 'g'), '<mark style="background:$1">')
+    .replace(/&lt;\/(span|mark)&gt;/g, '</$1>');
+}
+
+/**
+ * Double space in a cell: type the second space (so the cell really has the two spaces), then replace both with ". " as one
+ * Undo step. Returns true when it handled the key. (A table keeps no trailing spaces, so Undo here takes the full stop back.)
+ */
+function cellDoubleSpace(el: HTMLElement): boolean {
+  const sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
+  const r = sel.getRangeAt(0); if (!r.collapsed || !el.contains(r.startContainer)) return false;
+  const pre = document.createRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer, r.startOffset);
+  const at = pre.toString().length; const text = el.textContent ?? '';
+  const plan = cellPeriodPlan(text, at); if (!plan) return false;
+  document.execCommand('insertText', false, ' ');
+  const posAt = (offset: number): [Node, number] | null => {
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t: Node | null; let left = offset;
+    while ((t = w.nextNode())) { const len = (t as Text).data.length; if (left <= len) return [t, left]; left -= len; }
+    return null;
+  };
+  const start = posAt(at - 1); const end = posAt(at + 1 + plan.eat);
+  const now = window.getSelection(); if (!start || !end || !now) return true;
+  const rg = document.createRange(); rg.setStart(start[0], start[1]); rg.setEnd(end[0], end[1]);
+  now.removeAllRanges(); now.addRange(rg);
+  markCellFormat(); document.execCommand('insertText', false, plan.text);
+  return true;
+}
 
 function buildTable(d: HTMLElement, view: EditorView, text: string): void {
   const rows = parseTable(text.split('\n').map((t, i, all) => ({ from: all.slice(0, i).reduce((n, x) => n + x.length + 1, 0), text: t })));
@@ -238,16 +294,36 @@ function tableOp(view: EditorView, d: HTMLElement, op: string, r: number, c: num
 }
 type ChangeSpecLike = ChangeSpec;
 
+/** Runs a list edit on the cell's text and selection (true = it did something). One insertText, so the cell commits once and Undo is one step. */
+function cellListEdit(el: HTMLElement, fn: (text: string, a: number, b: number) => CellEdit | null): boolean {
+  const sel = window.getSelection(); if (!sel || !sel.rangeCount) return false;
+  const r = sel.getRangeAt(0); if (!el.contains(r.startContainer) || !el.contains(r.endContainer)) return false;
+  const pre = document.createRange(); pre.selectNodeContents(el); pre.setEnd(r.startContainer, r.startOffset);
+  const a = pre.toString().length, b = a + r.toString().length;
+  const text = el.textContent ?? '';
+  const ed = fn(text, a, b); if (!ed) return false;
+  const at = (n: number): [Node, number] => {
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); let t: Node | null; let left = n; let last: Node | null = null;
+    while ((t = w.nextNode())) { const len = (t as Text).data.length; if (left <= len) return [t, left]; left -= len; last = t; }
+    return last ? [last, (last as Text).data.length] : [el, 0];
+  };
+  const [sn, so] = at(ed.from), [en, eo] = at(ed.to);
+  const rg = document.createRange(); rg.setStart(sn, so); rg.setEnd(en, eo); sel.removeAllRanges(); sel.addRange(rg);
+  if (ed.insert === '') document.execCommand('delete'); else document.execCommand('insertText', false, ed.insert);
+  const [cn, co] = at(ed.caret); const c = document.createRange(); c.setStart(cn, co); c.collapse(true); sel.removeAllRanges(); sel.addRange(c);
+  return true;
+}
+
 function wireTable(d: HTMLElement, view: EditorView): void {
   const cellOf = (e: Event): HTMLElement | null => (e.target as HTMLElement).closest?.('td,th') as HTMLElement | null;
   d.addEventListener('focusin', (e) => {
     const el = cellOf(e); if (!el) return;
-    if (el.dataset.editing !== '1') { el.dataset.editing = '1'; el.textContent = el.dataset.src ?? ''; }
+    if (el.dataset.editing !== '1') { el.dataset.editing = '1'; el.textContent = toEdit(el.dataset.src ?? ''); }
   });
   d.addEventListener('focusout', (e) => {
     const el = cellOf(e); if (!el) return;
     delete el.dataset.editing;
-    el.innerHTML = cellHtml(escapeCell(el.textContent ?? '').trim());
+    el.innerHTML = cellHtml(escapeCell(fromEdit(el.textContent ?? '')).trim());
   });
   // Writes the cell's text into its source range. Not while an IME composition is in progress: the text is
   // committed once, on compositionend.
@@ -255,12 +331,13 @@ function wireTable(d: HTMLElement, view: EditorView): void {
     const t = tableAt(view, d); if (!t) return;
     const row = t.rows[rowIndex(Number(el.dataset.r))]; const cell = row?.cells[Number(el.dataset.c)];
     if (!cell) return;
-    const next = escapeCell(el.textContent ?? '').trim();
+    const next = escapeCell(fromEdit(el.textContent ?? '')).trim();
     el.dataset.src = unescapeCell(next);
     const after = view.state.sliceDoc(cell.cTo, cell.cTo + 1);
     const guard = endsWithBackslash(next) && !/\s/.test(after) ? ' ' : ''; // keep the closing pipe unescaped
     if (view.state.sliceDoc(cell.cFrom, cell.cTo) === next && !guard) return;
-    view.dispatch({ changes: { from: cell.cFrom, to: cell.cTo, insert: next + guard }, userEvent: 'input.type' });
+    const fmt = cellFormatPending; cellFormatPending = false;
+    view.dispatch({ changes: { from: cell.cFrom, to: cell.cTo, insert: next + guard }, userEvent: fmt ? 'input.format' : 'input.type', ...(fmt ? { annotations: isolateHistory.of('full') } : {}) });
   };
   d.addEventListener('input', (e) => {
     const el = cellOf(e); if (!el || (e as InputEvent).isComposing) return;
@@ -270,6 +347,7 @@ function wireTable(d: HTMLElement, view: EditorView): void {
   d.addEventListener('beforeinput', (e) => {
     const ie = e as InputEvent;
     if (ie.inputType === 'historyUndo') { e.preventDefault(); hooks.undo(); } else if (ie.inputType === 'historyRedo') { e.preventDefault(); hooks.redo(); }
+    else if (ie.inputType === 'insertText' && ie.data === ' ' && !ie.isComposing && doubleSpaceOn()) { const el = cellOf(e); if (el && cellDoubleSpace(el)) e.preventDefault(); }
   });
   d.addEventListener('keydown', (e) => {
     const el = cellOf(e); if (!el) return;
@@ -286,10 +364,15 @@ function wireTable(d: HTMLElement, view: EditorView): void {
       if (e.shiftKey) { if (idx > 0) focusCell(d, Number(all[idx - 1].dataset.r), Number(all[idx - 1].dataset.c)); }
       else if (idx < all.length - 1) focusCell(d, Number(all[idx + 1].dataset.r), Number(all[idx + 1].dataset.c));
       else tableOp(view, d, 'rowBelow', r, 0);
-    } else if (e.key === 'Enter') {
+    } else if (e.key === 'Enter' && !mod) {
+      // A Markdown table row is one line, so a line break inside a cell is written as <br>.
+      e.preventDefault();
+      if (!cellListEdit(el, cellEnter)) document.execCommand('insertText', false, '\n'); // shown as a new line while editing, saved as <br>
+    } else if (e.key === 'Enter') { // Cmd/Ctrl+Enter: next row (a new row from the last one)
       e.preventDefault();
       if (r === nrows - 1) tableOp(view, d, 'rowBelow', r, c); else focusCell(d, r + 1, c);
-    } else if (e.key === 'Escape') { e.preventDefault(); view.focus(); }
+    } else if (e.key === 'Backspace' && !mod && !e.altKey && !e.shiftKey && cellListEdit(el, cellBackspace)) { e.preventDefault(); }
+    else if (e.key === 'Escape') { e.preventDefault(); view.focus(); }
     else if (e.key === 'ArrowUp' && r === 0) {
       const t = tableAt(view, d);
       if (t && t.from > 0) { e.preventDefault(); view.dispatch({ selection: { anchor: t.from - 1 } }); view.focus(); }
@@ -349,7 +432,7 @@ class TableWidget extends WidgetType {
       const src = unescapeCell(raw);
       const al = alignOf(rows[1], (x) => rows[1].text.slice(x.cFrom - rows[1].from, x.cTo - rows[1].from), c);
       el.style.textAlign = ALIGN_CSS[al];
-      if (el.dataset.editing === '1') { if ((el.textContent ?? '').trim() !== src) { el.textContent = src; el.dataset.src = src; } return; }
+      if (el.dataset.editing === '1') { if (fromEdit(el.textContent ?? '').trim() !== src) { el.textContent = toEdit(src); el.dataset.src = src; } return; }
       if (el.dataset.src !== src) { el.dataset.src = src; el.innerHTML = cellHtml(raw); }
     }));
     requestAnimationFrame(() => { placeHandles(d); placeBar(); });
@@ -403,17 +486,33 @@ class FrontMatterWidget extends WidgetType {
 }
 
 const HIDE = Decoration.replace({});
+const SIMPLE_TAG_STYLE: Record<string, string> = {
+  b: 'font-weight:bold', strong: 'font-weight:bold', i: 'font-style:italic', em: 'font-style:italic', cite: 'font-style:italic',
+  u: 'text-decoration:underline', ins: 'text-decoration:underline', s: 'text-decoration:line-through', del: 'text-decoration:line-through', strike: 'text-decoration:line-through',
+  sub: 'vertical-align:sub;font-size:.8em', sup: 'vertical-align:super;font-size:.8em', small: 'font-size:.85em',
+  kbd: 'font-family:var(--lm-mono,monospace);font-size:.85em;padding:0 4px;border:1px solid color-mix(in srgb,currentColor 35%,transparent);border-radius:3px',
+};
+type Span = { from: number; to: number };
+/** Matching <tag>…</tag> pairs (no attributes, case-insensitive) within one paragraph, properly nested per tag name. */
+export function findSimpleTagPairs(text: string): Array<{ tag: string; open: Span; close: Span }> {
+  const out: Array<{ tag: string; open: Span; close: Span }> = [];
+  const stacks = new Map<string, Span[]>();
+  const re = /<(\/?)([a-zA-Z]+)>/g;
+  for (let m = re.exec(text); m; m = re.exec(text)) {
+    const tag = m[2].toLowerCase();
+    if (!(tag in SIMPLE_TAG_STYLE)) continue;
+    const span = { from: m.index, to: m.index + m[0].length };
+    const st = stacks.get(tag) ?? []; stacks.set(tag, st);
+    if (!m[1]) { st.push(span); continue; }
+    const o = st.pop();
+    if (!o || /\n[ \t]*\n/.test(text.slice(o.to, span.from))) continue;
+    out.push({ tag, open: o, close: span });
+  }
+  return out;
+}
+
 const markDeco = (cls: string) => Decoration.mark({ class: cls });
 const M = { strong: markDeco('cm-lm-strong'), em: markDeco('cm-lm-em'), del: markDeco('cm-lm-del'), code: markDeco('cm-lm-code'), link: markDeco('cm-lm-link'), raw: markDeco('cm-lm-mark') };
-
-function frontMatter(doc: EditorState['doc']): { to: number; lastLine: number } | null {
-  if (doc.lines < 2 || doc.line(1).text.trimEnd() !== '---') return null;
-  for (let i = 2; i <= Math.min(doc.lines, 200); i++) {
-    const t = doc.line(i).text.trimEnd();
-    if (t === '---' || t === '...') return { to: doc.line(i).to, lastLine: i };
-  }
-  return null;
-}
 
 interface LineInfo { cls: Set<string>; style?: string }
 
@@ -446,6 +545,7 @@ function build(state: EditorState): DecorationSet {
 
   let mermaidIdx = 0;
   const tagRanges = new Set<string>();
+  const hang = new Map<number, { W: string; pad: number; quoted: boolean; markerLine: number }>(); // per list item, filled when its marker is visited
   const depthOf = (n: SyntaxNodeRef): number => { let d = -1; for (let p = n.node.parent; p; p = p.parent) if (p.name === 'BulletList' || p.name === 'OrderedList') d++; return d; };
 
   tree.iterate({
@@ -457,7 +557,32 @@ function build(state: EditorState): DecorationSet {
         case 'HTMLTag': tagRanges.add(from + ':' + to); break;
         case 'Paragraph':
           if (parent === 'Document') blockLines(from, to, 'lm-p', true);
-          else if (parent === 'ListItem' || parent === 'Task') blockLines(from, to, 'lm-li', false);
+          else if (parent === 'ListItem' || parent === 'Task') {
+            blockLines(from, to, 'lm-li', false);
+            // Lines of the item's text that are not the marker line (hard-wrapped text, further paragraphs) hang like the item's own text.
+            const item = parent === 'Task' ? node.node.parent?.parent : node.node.parent;
+            const h = item ? hang.get(item.from) : undefined;
+            if (h) {
+              for (let i = doc.lineAt(from).number; i <= doc.lineAt(to).number; i++) {
+                if (i === h.markerLine) continue;
+                const cl = doc.line(i);
+                const q = h.quoted ? /^(?:[ \t]*>[ \t]?)*/.exec(cl.text)![0].length : 0; // the quote marks in front of the line
+                const ws = /^[ \t]*/.exec(cl.text.slice(q))![0].length;
+                const P = `calc(${h.pad}em + ${h.W})`;
+                const info = addLine(i);
+                if (activeLines.has(i)) {
+                  if (h.quoted) { // the raw "> " marks and the spaces form one box, so the text still lines up with the item's text
+                    const qd = (cl.text.slice(0, q).match(/>/g) ?? []).length; const box = `calc(${qd * 1.1 + h.pad}em + ${h.W})`;
+                    info.style = `padding-left:${box};text-indent:calc(-1 * ${box})`;
+                    if (q + ws) out.push(Decoration.mark({ class: 'lm-wsbox', attributes: { style: `width:${box}` } }).range(cl.from, cl.from + q + ws));
+                  } else {
+                    info.style = `padding-left:${P};text-indent:calc(-1 * ${P})`;
+                    if (ws) out.push(Decoration.mark({ class: 'lm-wsbox', attributes: { style: `width:${P}` } }).range(cl.from, cl.from + ws));
+                  }
+                } else { info.style = `padding-left:${P}`; hide(cl.from + q, cl.from + q + ws); }
+              }
+            }
+          }
           else if (parent === 'Blockquote') blockLines(from, to, 'lm-quote', false);
           break;
         case 'ATXHeading1': case 'ATXHeading2': case 'ATXHeading3': case 'ATXHeading4': case 'ATXHeading5': case 'ATXHeading6': {
@@ -539,14 +664,46 @@ function build(state: EditorState): DecorationSet {
           const active = spanActive(mark.from, mark.from);
           const level = Math.max(0, depthOf(node));
           const task = node.node.getChild('Task')?.getChild('TaskMarker') ?? null;
-          const bullet = /^[-*+]$/.test(doc.sliceString(mark.from, mark.to));
+          const markerText = doc.sliceString(mark.from, mark.to);
+          const bullet = /^[-*+]$/.test(markerText);
           const lead = doc.sliceString(ln.from, mark.from);
-          if (!active && lead.trim() === '' && level > 0) { hide(ln.from, mark.from); addLine(ln.number).style = `padding-left:${level * 1.6}em`; }
+          const plain = lead.trim() === ''; // not inside a quote
+          const skipWs = (p: number) => { while (p < ln.to && /[ \t]/.test(doc.sliceString(p, p + 1))) p++; return p; };
+          const gapEnd = skipWs(mark.to); // marker plus the spaces after it form one box of fixed width, so wrapped lines can hang under the text
+          const digits = markerText.length - 1;
+          // Width of that box: the same in every theme, and for the same kind of item at every nesting level.
+          const W = task ? (active ? (bullet ? '2.4em' : `calc(${digits + 1}ch + 2.2em)`) : '1.4em') : bullet ? '1.4em' : `calc(${digits + 1}ch + .5em)`;
+          const pad = level * 1.6;
+          hang.set(node.from, { W, pad, quoted: !plain, markerLine: ln.number });
+          if (plain) {
+            const li = addLine(ln.number);
+            if (!active) {
+              if (lead.length) hide(ln.from, mark.from);
+              li.style = `padding-left:calc(${pad}em + ${W});text-indent:calc(-1 * ${W})`;
+            } else {
+              const P = `calc(${pad}em + ${W})`;
+              li.style = `padding-left:${P};text-indent:calc(-1 * ${P})`;
+              if (lead.length) out.push(Decoration.mark({ class: 'lm-wsbox', attributes: { style: `width:${pad}em` } }).range(ln.from, mark.from));
+            }
+          } else { // inside a quote: the same hanging indent (a quote line has no padding of its own)
+            const li = addLine(ln.number);
+            const q = /^(?:[ \t]*>[ \t]?)*/.exec(lead)![0].length; const qd = (lead.slice(0, q).match(/>/g) ?? []).length;
+            if (!active) {
+              if (q < lead.length) hide(ln.from + q, mark.from);
+              li.style = `padding-left:calc(${pad}em + ${W});text-indent:calc(-1 * ${W})`;
+            } else {
+              const box = `${qd * 1.1 + pad}em`; const P = `calc(${box} + ${W})`;
+              li.style = `padding-left:${P};text-indent:calc(-1 * ${P})`;
+              out.push(Decoration.mark({ class: 'lm-wsbox', attributes: { style: `width:${box}` } }).range(ln.from, mark.from));
+            }
+          }
           if (!active && task) {
             const checked = /[xX]/.test(doc.sliceString(task.from, task.to));
-            out.push(Decoration.replace({ widget: new CheckboxWidget(checked) }).range(mark.from, task.to));
-          } else if (!active && bullet) out.push(Decoration.replace({ widget: new BulletWidget(level) }).range(mark.from, mark.to));
-          else if (active || task) out.push(M.raw.range(mark.from, mark.to));
+            out.push(Decoration.replace({ widget: new CheckboxWidget(checked) }).range(mark.from, skipWs(task.to)));
+          } else if (!active && bullet) out.push(Decoration.replace({ widget: new BulletWidget(level) }).range(mark.from, gapEnd));
+          else if (task) out.push(Decoration.mark({ class: 'cm-lm-mark lm-mbox', attributes: { style: `width:${W}` } }).range(mark.from, skipWs(task.to)));
+          else if (active) out.push(Decoration.mark({ class: 'cm-lm-mark lm-mbox', attributes: { style: `width:${W}` } }).range(mark.from, gapEnd));
+          else if (gapEnd > mark.from) out.push(Decoration.mark({ class: 'lm-mbox', attributes: { style: `width:${W}` } }).range(mark.from, gapEnd));
           break;
         }
         case 'StrongEmphasis': case 'Emphasis': case 'Strikethrough': case 'InlineCode': {
@@ -599,6 +756,19 @@ function build(state: EditorState): DecorationSet {
       if (!tagRanges.has(p.open.from + ':' + p.open.to) || !tagRanges.has(p.close.from + ':' + p.close.to)) continue;
       const style = p.kind === 'text' ? `color:${p.value}` : `background:${p.value};border-radius:2px`;
       if (p.close.from > p.open.to) out.push(Decoration.mark({ attributes: { style }, class: 'cm-lm-colour' }).range(p.open.to, p.close.from));
+      if (touches(p.open.from, p.close.to)) { out.push(M.raw.range(p.open.from, p.open.to)); out.push(M.raw.range(p.close.from, p.close.to)); }
+      else { hide(p.open.from, p.open.to); hide(p.close.from, p.close.to); }
+    }
+  }
+
+  {
+    // Plain inline HTML formatting tags (<b>, <i>, <u>, ...): show the formatting and hide the tags, like the colour tags.
+    // A tag at the start of a line parses as an HTML block, not an HTMLTag, so check "not inside code" instead.
+    const tree = syntaxTree(state);
+    const inCode = (pos: number) => { for (let n: SyntaxNode | null = tree.resolveInner(pos, 1); n; n = n.parent) if (/^(InlineCode|FencedCode|CodeBlock|CodeText|Comment)/.test(n.name)) return true; return false; };
+    for (const p of findSimpleTagPairs(doc.toString())) {
+      if (inCode(p.open.from) || inCode(p.close.from)) continue;
+      if (p.close.from > p.open.to) out.push(Decoration.mark({ attributes: { style: SIMPLE_TAG_STYLE[p.tag] } }).range(p.open.to, p.close.from));
       if (touches(p.open.from, p.close.to)) { out.push(M.raw.range(p.open.from, p.open.to)); out.push(M.raw.range(p.close.from, p.close.to)); }
       else { hide(p.open.from, p.open.to); hide(p.close.from, p.close.to); }
     }

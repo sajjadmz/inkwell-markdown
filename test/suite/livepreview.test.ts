@@ -46,6 +46,27 @@ suite('Live preview', () => {
     await closeTab(file);
   });
 
+  test('inline HTML <b>, <i>, <u> tags are hidden and their formatting shown; bytes unchanged', async () => {
+    const file = path.join(tmp, 'tags.md');
+    const src = 'top\n\n<i><span style="color:#e03e2d">Note: italic red</span></i>\n\n<b>Answer:</b> plain <u>under</u> and <I>caps</I>\n\nend\n';
+    fs.writeFileSync(file, src);
+    const { uri, doc } = await openLive(file);
+    await cmd('inkwell._debugMoveCursor', uri, 6, 0);
+    await new Promise((r) => setTimeout(r, 300));
+    const { html } = (await cmd<{ html: string }>('inkwell._debugGetDom', uri))!;
+    for (const raw of ['&lt;i&gt;', '&lt;/i&gt;', '&lt;b&gt;', '&lt;/b&gt;', '&lt;u&gt;', '&lt;I&gt;']) assert.ok(!html.includes(raw), `${raw} is hidden`);
+    assert.ok(/font-style: ?italic/.test(html), 'italic shown');
+    assert.ok(/font-weight: ?bold/.test(html), 'bold shown');
+    assert.ok(/text-decoration: ?underline/.test(html), 'underline shown');
+    await cmd('inkwell._debugMoveCursor', uri, 4, 2);
+    await new Promise((r) => setTimeout(r, 300));
+    const h2 = (await cmd<{ html: string }>('inkwell._debugGetDom', uri))!.html;
+    assert.ok(/cm-lm-mark">(<[^>]*>)*&lt;(<[^>]*>)*b(<[^>]*>)*&gt;/.test(h2), 'tags are shown on the line being edited');
+    assert.ok(!doc.isDirty, 'not dirty');
+    await closeTab(file);
+    assert.strictEqual(fs.readFileSync(file, 'utf8'), src, 'bytes unchanged');
+  });
+
   test('a checkbox click changes exactly "[ ]" to "[x]" and nothing else', async () => {
     const file = copy('task-list.md', 'b.md');
     const orig = fs.readFileSync(file);

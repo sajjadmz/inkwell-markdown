@@ -1,0 +1,14 @@
+import { serve, open } from '../demo/lib.mjs';
+const { server, base } = await serve();
+const s = await open(base, { doc: 'probe-table.md', theme: 'github-light.css' });
+const { page } = s; const f = page.frameLocator('#wv'); const fr = page.frames().find((x) => x.url().includes('webview.html'));
+const row = async () => (await fr.evaluate(() => window.__doc())).split('\n')[5];
+await f.locator('td', { hasText: 'Start the two' }).click(); await page.waitForTimeout(200);
+await page.keyboard.type('XY'); await page.waitForTimeout(300); console.log('typed :', await row());
+await page.keyboard.press('Meta+z'); await page.waitForTimeout(300); console.log('undo  :', await row());
+console.log('cm undoDepth:', await fr.evaluate(() => { const v = window.__view; const h = v.state.values.find((x) => x && x.done); return h ? h.done.length : 'n/a'; }));
+await page.keyboard.press('Escape'); await page.waitForTimeout(200);
+await fr.evaluate(() => { const v = window.__view; const t = v.state.doc.toString(); const i = t.indexOf('## D'); v.dispatch({ selection: { anchor: i + 3 } }); v.focus(); });
+await page.keyboard.type('Q'); await page.waitForTimeout(300); console.log('editor typed:', (await fr.evaluate(() => window.__doc())).split('\n')[0]);
+await page.keyboard.press('Meta+z'); await page.waitForTimeout(300); console.log('editor undo :', (await fr.evaluate(() => window.__doc())).split('\n')[0]);
+await s.ctx.close(); await s.browser.close(); server.close();

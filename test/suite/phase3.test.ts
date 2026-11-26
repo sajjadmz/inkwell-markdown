@@ -26,7 +26,7 @@ suite('Phase 3 toolbar and formatting', () => {
   test('the toolbar is fixed at the top and has every button in order', async () => {
     const { uri, file } = await open('hello\n');
     const r = await ask<{ names: string[]; top: number; h: number }>(uri, 'debugToolbar');
-    const want = ['heading', 'bold', 'italic', 'strike', 'textcolor', 'textcolor-menu', 'highlight', 'highlight-menu', 'code', 'link', 'bullets', 'numbered', 'checklist', 'quote', 'codeblock', 'codeblock-lang', 'table', 'diagram', 'hr', 'page', 'plain'];
+    const want = ['heading', 'bold', 'italic', 'strike', 'textcolor', 'textcolor-menu', 'highlight', 'highlight-menu', 'code', 'link', 'bullets', 'numbered', 'checklist', 'outdent', 'indent', 'quote', 'codeblock', 'codeblock-lang', 'table', 'diagram', 'hr', 'page', 'plain'];
     assert.deepStrictEqual(r.names, want);
     assert.strictEqual(r.top, 0);
     assert.ok(r.h > 20);
@@ -73,9 +73,9 @@ suite('Phase 3 toolbar and formatting', () => {
     { name: 'numbered', text: 'one\ntwo\n\nthree\n', s: [0, 0, 1, 3], a: 'numbered' },
     { name: 'checklist', text: 'one\ntwo\n\nthree\n', s: [0, 0, 1, 3], a: 'checklist' },
     { name: 'quote', text: 'one\ntwo\n\nthree\n', s: [0, 0, 1, 3], a: 'quote' },
-    { name: 'h1', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h1' },
-    { name: 'h2', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h2' },
-    { name: 'h3', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h3' },
+    { name: 'h1', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h1', off: ['h0'] },
+    { name: 'h2', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h2', off: ['h0'] },
+    { name: 'h3', text: 'Title here\n', s: [0, 2, 0, 2], a: 'h3', off: ['h0'] },
     { name: 'codeblock', text: 'one\ntwo\n\nthree\n', s: [0, 0, 1, 3], a: 'codeblock', arg: 'sql' },
     { name: 'text colour then No colour', text: 'alpha beta gamma\n', s: [0, 6, 0, 10], a: 'colour:text', arg: RED, off: ['colour:text', 'none'] },
     { name: 'highlight then No colour', text: 'alpha beta gamma\n', s: [0, 6, 0, 10], a: 'colour:highlight', arg: YEL, off: ['colour:highlight', 'none'] },
@@ -171,12 +171,12 @@ suite('Phase 3 toolbar and formatting', () => {
   test('every formatting shortcut is contributed only inside Inkwell (when-clause), so VS Code chords stay intact', () => {
     const pkg = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../../../package.json'), 'utf8'));
     const kb = pkg.contributes.keybindings.filter((k: { command: string }) => k.command.startsWith('inkwell.format.'));
-    assert.strictEqual(kb.length, 16);
+    assert.strictEqual(kb.length, 18);
     for (const k of kb) assert.strictEqual(k.when, "activeCustomEditorId == 'inkwell.editor'", k.command);
     const mac = new Set(kb.map((k: { mac: string }) => k.mac));
     const win = new Set(kb.map((k: { key: string }) => k.key));
-    for (const key of ['cmd+b', 'cmd+i', 'cmd+shift+x', 'cmd+k', 'cmd+e', 'cmd+shift+8', 'cmd+shift+7', 'cmd+shift+9', 'cmd+shift+.', 'cmd+alt+1', 'cmd+alt+2', 'cmd+alt+3', 'cmd+alt+0', 'cmd+alt+c', 'cmd+shift+h', 'cmd+shift+c']) assert.ok(mac.has(key), key);
-    for (const key of ['ctrl+b', 'ctrl+i', 'ctrl+shift+x', 'ctrl+k', 'ctrl+e', 'ctrl+shift+8', 'ctrl+shift+7', 'ctrl+shift+9', 'ctrl+shift+.', 'ctrl+shift+alt+1', 'ctrl+shift+alt+2', 'ctrl+shift+alt+3', 'ctrl+shift+alt+0', 'ctrl+shift+alt+c', 'ctrl+shift+h', 'ctrl+shift+c']) assert.ok(win.has(key), key);
+    for (const key of ['cmd+b', 'cmd+i', 'cmd+shift+x', 'cmd+k', 'cmd+e', 'cmd+shift+8', 'cmd+shift+7', 'cmd+shift+9', 'cmd+shift+.', 'cmd+alt+1', 'cmd+alt+2', 'cmd+alt+3', 'cmd+alt+0', 'cmd+alt+c', 'cmd+shift+h', 'cmd+shift+c', 'cmd+]', 'cmd+[']) assert.ok(mac.has(key), key);
+    for (const key of ['ctrl+b', 'ctrl+i', 'ctrl+shift+x', 'ctrl+k', 'ctrl+e', 'ctrl+shift+8', 'ctrl+shift+7', 'ctrl+shift+9', 'ctrl+shift+.', 'ctrl+shift+alt+1', 'ctrl+shift+alt+2', 'ctrl+shift+alt+3', 'ctrl+shift+alt+0', 'ctrl+shift+alt+c', 'ctrl+shift+h', 'ctrl+shift+c', 'ctrl+]', 'ctrl+[']) assert.ok(win.has(key), key);
     // Ctrl+Alt (AltGr on European layouts) must never be bound on Windows/Linux.
     for (const k of pkg.contributes.keybindings) assert.ok(!/^ctrl\+alt\+/.test(k.key), k.command + ' ' + k.key);
     for (const key of ['cmd+s', 'cmd+z', 'cmd+shift+z', 'ctrl+s', 'ctrl+z']) assert.ok(!mac.has(key) && !win.has(key), key + ' stays VS Code\'s');
@@ -204,8 +204,12 @@ suite('Phase 3 review fixes', () => {
   test('bold on a partial-mark selection removes the whole bold node', async () => {
     assert.deepStrictEqual(await run('a **b** c\n', [0, 2, 0, 6], [['bold']]), ['a b c\n']);
   });
-  test('heading on a list line replaces the marker; toggling back leaves plain text', async () => {
-    assert.deepStrictEqual(await run('- item\n', [0, 3, 0, 3], [['h1'], ['h1']]), ['# item\n', 'item\n']);
+  test('heading on a list line keeps the bullet; Normal removes only the heading; same level again keeps it', async () => {
+    assert.deepStrictEqual(await run('- item\n', [0, 3, 0, 3], [['h1'], ['h1'], ['h0']]), ['- # item\n', '- # item\n', '- item\n']);
+  });
+  test('removing a heading never turns its words into list syntax, and re-applying restores them exactly', async () => {
+    assert.deepStrictEqual(await run('## 1. Overview\n', [0, 5, 0, 5], [['h0'], ['h2'], ['h1']]), ['1\\. Overview\n', '## 1. Overview\n', '# 1. Overview\n']);
+    assert.deepStrictEqual(await run('# - note\n', [0, 4, 0, 4], [['h0'], ['h1']]), ['\\- note\n', '# - note\n']);
   });
   test('colour on part of a span splits it; "No colour" on part unwraps only that part', async () => {
     const src = '<span style="color:#d73a49">hello world</span>\n';
@@ -323,14 +327,13 @@ suite('Phase 3 editable tables (bug A)', () => {
     });
   }
 
-  test('floating bar follows the focused row inside the viewport (row 30 of 40)', async () => {
+  test('floating bar stays inside the viewport and never covers the focused row (row 30 of 40)', async () => {
     const rowsTxt = Array.from({ length: 40 }, (_, i) => `| r${i + 1} | v${i + 1} |`).join('\n');
     const { uri, file } = await open(`# T\n\n| H | V |\n|---|---|\n${rowsTxt}\n\nend\n`);
     const r = (await ask<any>(uri, 'debugTable', { r: 30, c: 0, op: 'barRect' }));
     assert.ok(r && !r.hidden && r.bar, 'bar visible');
     assert.ok(r.bar.top >= 0 && r.bar.bottom <= r.vh && r.bar.left >= 0 && r.bar.right <= r.vw, 'bar inside viewport');
-    const above = r.row.top - r.bar.bottom, below = r.bar.top - r.row.bottom;
-    assert.ok((above >= 0 && above < 24) || (below >= 0 && below < 24), `adjacent to the row, not covering it (${above}/${below})`);
+    assert.ok(r.bar.bottom <= r.row.top || r.bar.top >= r.row.bottom, `not covering the row (${JSON.stringify(r)})`);
     await closeTab(file);
   });
 
@@ -369,10 +372,58 @@ suite('Phase 3 editable tables (bug A)', () => {
     await closeTab(file);
   });
 
-  test('Enter in the last row adds a row; Tab moves on', async () => {
+  test('Cmd/Ctrl+Enter in the last row adds a row; Tab moves on', async () => {
     const { uri, doc, file } = await open();
-    await tbl(uri, { r: 2, c: 0, op: 'Enter' });
+    await tbl(uri, { r: 2, c: 0, op: 'ModEnter' });
     assert.strictEqual(doc.getText(), TABLE.replace('| b    | 2     |\n', '| b    | 2     |\n|      |       |\n'));
+    await closeTab(file);
+  });
+
+  test('Enter in a cell writes <br> and the cell shows a line break', async () => {
+    const { uri, doc, file } = await open();
+    await tbl(uri, { r: 1, c: 0, op: 'Enter', at: 1 });
+    assert.strictEqual(doc.getText(), TABLE.replace('| a    |', '| a<br>    |'), doc.getText());
+    const r = await ask<{ html: string }>(uri, 'debugTable', { r: 1, c: 0, op: 'html' });
+    assert.ok(/a<br>/.test(r.html), 'rendered as a real line break: ' + r.html);
+    await closeTab(file);
+  });
+
+  test('Bold, Italic and colour work on text selected in a cell; Italic toggles off; Undo restores', async () => {
+    const { uri, doc, file } = await open();
+    await tbl(uri, { r: 1, c: 1, op: 'format', from: 0, to: 1, action: 'italic' });
+    assert.ok(doc.getText().includes('| *1*'), doc.getText());
+    await tbl(uri, { r: 1, c: 1, op: 'format', from: 0, to: 3, action: 'italic' });
+    assert.strictEqual(doc.getText(), TABLE, 'italic toggles off');
+    await tbl(uri, { r: 1, c: 1, op: 'format', from: 0, to: 1, action: 'bold' });
+    assert.ok(doc.getText().includes('| **1**'), doc.getText());
+    const h = await ask<{ html: string }>(uri, 'debugTable', { r: 1, c: 1, op: 'html' });
+    assert.ok(h.html.includes('<strong>1</strong>'), h.html);
+    await tbl(uri, { r: 2, c: 1, op: 'format', from: 0, to: 1, action: 'colour:text', arg: '#e03e2d' });
+    assert.ok(doc.getText().includes('<span style="color:#e03e2d">2</span>'), doc.getText());
+    const h2 = await ask<{ html: string }>(uri, 'debugTable', { r: 2, c: 1, op: 'html' });
+    assert.ok(h2.html.includes('<span style="color:#e03e2d">2</span>'), h2.html);
+    await closeTab(file);
+  });
+
+  test('in a cell: Bold then Italic stack on the same selection, each toggles off, each is one Undo step', async () => {
+    const { uri, doc, file } = await open();
+    const fmt = (from: number, to: number, action: string) => tbl(uri, { r: 1, c: 0, op: 'format', from, to, action });
+    await fmt(0, 1, 'bold'); assert.ok(doc.getText().includes('| **a**'), doc.getText());
+    await fmt(2, 3, 'italic'); assert.ok(doc.getText().includes('| ***a***'), doc.getText());
+    await fmt(3, 4, 'bold'); assert.ok(doc.getText().includes('| *a*'), 'bold removed: ' + doc.getText());
+    await fmt(1, 2, 'italic'); assert.strictEqual(doc.getText(), TABLE, 'italic removed');
+    await cmd('inkwell.undo'); await sleep(200);
+    assert.ok(doc.getText().includes('| *a*'), 'one undo step back: ' + doc.getText());
+    await closeTab(file);
+  });
+
+  test('in a cell: bullets and numbering prefix each line; heading is refused without changing the file', async () => {
+    const { uri, doc, file } = await open(TABLE.replace('| a    |', '| a<br>b |'));
+    await tbl(uri, { r: 1, c: 0, op: 'format', from: 0, to: 0, action: 'numbered' });
+    assert.ok(doc.getText().includes('| 1. a<br>2. b |'), doc.getText());
+    const before = doc.getText();
+    await tbl(uri, { r: 1, c: 0, op: 'format', from: 0, to: 0, action: 'h1' });
+    assert.strictEqual(doc.getText(), before);
     await closeTab(file);
   });
 

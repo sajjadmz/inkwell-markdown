@@ -156,6 +156,7 @@ From left to right:
 | Highlighter | Highlight the selected text. The arrow opens six colours. |
 | Inline code, Link | `code` formatting and a link |
 | Bullets, Numbers, Checklist, Quote | Lists and block quotes |
+| Decrease indent, Increase indent | Move a list item out of, or into, the item above it (lists only) |
 | Code block | Fenced code block. The arrow picks the language. |
 | Table | Insert a 3 × 2 table |
 | Diagram ▾ | Insert a starter Mermaid diagram: flowchart, sequence, timeline, mind map, Gantt, pie or state |
@@ -181,13 +182,65 @@ These work only inside the Inkwell editor (except the first row). Save, undo and
 | Numbered list | Cmd+Shift+7 | Ctrl+Shift+7 |
 | Checklist | Cmd+Shift+9 | Ctrl+Shift+9 |
 | Quote | Cmd+Shift+. | Ctrl+Shift+. |
+| Increase indent (list items) | Cmd+] or Tab | Ctrl+] or Tab |
+| Decrease indent (list items) | Cmd+[ or Shift+Tab | Ctrl+[ or Shift+Tab |
 | Heading 1 / 2 / 3 | Cmd+Alt+1 / 2 / 3 | Ctrl+Shift+Alt+1 / 2 / 3 |
 | Normal text | Cmd+Alt+0 | Ctrl+Shift+Alt+0 |
 | Code block | Cmd+Alt+C | Ctrl+Shift+Alt+C |
 | Highlight (last colour used) | Cmd+Shift+H | Ctrl+Shift+H |
 | Text colour (last colour used) | Cmd+Shift+C | Ctrl+Shift+C |
+| Find | Cmd+F | Ctrl+F |
+| Find and replace | Cmd+Alt+F | Ctrl+H |
+| Next match | Cmd+G | F3 |
+| Previous match | Cmd+Shift+G | Shift+F3 |
 
 **Why Ctrl+Shift+Alt on Windows and Linux?** On many European keyboard layouts, Ctrl+Alt is the same as AltGr, which types characters such as `@`, `{` and `[`. Using Ctrl+Alt for headings would block those characters, so these shortcuts add Shift.
+
+## Typing helpers
+
+### Double space gives a full stop
+Like on a Mac: type a space after a word, then another, and the two spaces become a full stop and a space. It works in normal text, headings, lists, quotes and table cells. It never happens after punctuation, at the start of a line, or inside code, links and the front-matter block at the top of a file. One Undo (Cmd/Ctrl+Z) gives the two spaces back. (In a table cell, Undo takes the full stop away, because tables do not keep spaces at the end of a cell.)
+It also works right after a closing `~~`, colour tag (`</span>`, `</mark>`) or `</b>`, `</i>`, `</u>`, `</s>`, `</del>`, `</strong>`, `</em>`. If the cursor is just before closing marks (`**bold|**`), the full stop goes inside them and the space after them (`**bold.** `), so bold, italic and the like are never broken; one Undo still gives back the two spaces.
+Setting: **Inkwell: Double Space Period**. "auto" (the default) is on for Mac and off for Windows and Linux; choose "on" or "off" to force it.
+
+### Indent and outdent lists
+Put the cursor on a bullet, numbered or checklist item (or select several) and press the Increase indent button, Cmd/Ctrl+] or Tab. The item moves in under the item above it. Decrease indent, Cmd/Ctrl+[ or Shift+Tab moves it back out. Only the spaces in front of the item change, never your words.
+- With several items selected (or Select All) they move as one block: an item whose parent is selected too moves with it and keeps its place inside it. An item that cannot move (the first one, with nothing above it to sit under) stays where it is and the others still move; you only get a note when nothing at all could change. Decrease indent works the same way. It is one Undo step.
+- **Numbers restart when they start a new level, like in Word.** A numbered item that becomes the first item of a nested list is renumbered to `1.` (Markdown does not allow a nested list to start at another number); one that joins a nested list that is already there gets the previous number plus one; one that moves back out gets the previous number at that level plus one. Only the numbers of the items you moved change, nothing else in the list.
+- On normal text, headings and quotes, Tab and Shift+Tab show a note ("Indent works on bullet and numbered lists"), type nothing and keep the cursor in the editor. (Press Esc first if you want Tab to move on to the next control; inside a code block Tab is unchanged.) Inside a table cell Tab still jumps to the next cell.
+
+### Lists work like Word
+- **Enter** at the end of a bullet, numbered or checklist item starts the next item (the next number, an empty checkbox). Enter in the middle of an item splits it, Enter in front of the text opens an empty item above. If your list has blank lines between its items, the new item gets one too, so the list keeps its look. Lines in a quote (`>`) continue the quote, and lists inside quotes work the same way.
+- **Enter on an empty item** ends the list. If the item is indented, it moves out one level instead (like pressing Shift+Tab).
+- **Shift+Enter** starts a new line *inside the same item*, lined up under the item's text. Other Markdown viewers show such a line as a space, as Markdown has no other way to say it without extra characters in your text.
+- **Backspace right after the number or bullet** removes it and keeps your words (one Undo brings it back). Backspace again joins the line with the one above, as usual. Markdown has no "unnumbered line inside a list", so the words are set apart with a blank line from the items around them, and an indented item keeps its indentation and becomes a paragraph of the item above. **Delete** at the end of an item pulls the next item's words up and removes its number.
+- **Numbers stay in order by themselves.** When you add, remove, move, paste or indent items, or type a number such as `2.` yourself, the numbers after that place are counted on again (`3.`, `4.` ...). Only the digits change. A list that starts at `5.` keeps starting at 5; a list where every item says `1.` stays that way; lists you did not touch are never renumbered, and neither are changes that come from another program. Undo puts back exactly what was there.
+- Inside a **table cell**, a line that starts with `- `, `1. ` or `☐ ` continues on Enter, and Enter or Backspace on an empty one removes the prefix.
+- After **Increase / Decrease indent** your cursor stays where it was in the text (also when it was in front of the number), and a selection keeps selecting the same words.
+
+### Wrapped list items hang neatly
+When a bullet, numbered or checklist item is long and wraps onto more lines, the extra lines line up under the start of the item's text, not under the bullet, at every level, also inside quotes.
+
+### Find and replace
+Press Cmd+F (Mac) or Ctrl+F (Windows and Linux). A small bar slides in under the toolbar. Type what you are looking for and every match is highlighted on the page, with a counter such as "3 of 12". The current match is the stronger colour.
+
+- **Next and Previous:** Enter and Shift+Enter in the Find box, the arrow buttons, or Cmd+G and Cmd+Shift+G (Mac) / F3 and Shift+F3 (Windows and Linux). After the last match you go round to the first.
+- **Options:** **Aa** matches capital letters exactly; **ab** (underlined) finds whole words only.
+- **Close:** press Esc or the X. If you chose a match (typed in the Find box, or used Next, Previous or Enter), that match is selected for you, as in Word. If you only opened the bar and closed it again, your cursor or selection (also inside a table cell) is exactly where you left it, so the next key you type goes there. If you had selected one line of text before pressing Cmd/Ctrl+F, it is already typed into the Find box.
+- **Replace:** press Cmd+Alt+F (Mac) / Ctrl+H (Windows and Linux), or click the small arrow at the left of the bar, to show the Replace row. **Replace** changes the current match and moves to the next one. **Replace all** changes every match in one go and says "Replaced 12"; one Undo (Cmd/Ctrl+Z) brings them all back. The replacement is plain text, so a `*` or `|` you type is just that character.
+
+Inkwell searches what you can read on the page, not the Markdown symbols behind it. So "two months" finds **two** months in bold, and the words inside a link or a table cell, but not the web address of a link, the tags of HTML, the front-matter block at the top of a file, or the text of a picture's name. A match never runs across two lines, two paragraphs, two table cells or a line break (`<br>`).
+
+When a match is split by formatting, for example **two** months, the new text goes into the first part and the rest of the old words are removed; the bold stays around the new text. If a replacement would break the formatting or a table, that match is skipped and the bar tells you ("Skipped one match" or "Replaced 11, skipped 1"). Your file is never left half-broken.
+
+(Cmd+Shift+H on a Mac is still the highlighter, so Replace uses Cmd+Alt+F, the same as VS Code's own Replace.)
+
+### Paste or drop pictures
+Copy a picture (for example a screenshot) and paste it with Cmd/Ctrl+V, or drop picture files onto the page (**hold Shift while you drop**; without Shift, VS Code opens the file in a new tab instead). Inkwell saves the picture in an `images` folder next to your Markdown file (named like `my-note-20261124-093015.png`; an existing file is never overwritten) and inserts the picture at the cursor, or in the table cell you are in. Pictures can be png, jpg, jpeg, gif, webp or svg, up to 25 MB.
+- Save a brand-new file first; otherwise you get the note "Save the file first to paste pictures."
+- Undo removes the picture from the page, but the saved file stays in `images`; delete it yourself if you do not want it.
+- Pasting text works exactly as before. If a copy contains both text and a picture (as Word does), the text is pasted.
+- If VS Code still opens the file in a new tab, you let go of Shift too early: hold Shift from before you start dragging until after you drop. Or just copy the picture and paste it.
 
 ## Page styles
 
@@ -205,7 +258,7 @@ To choose one, use any of these:
 
 Inkwell edits your file's text directly. When you type, only the characters you change are sent to VS Code, never a rewritten copy of the whole file, so spacing, line endings and anything Inkwell does not display stay exactly as they were. Opening a file and closing it again does not touch it.
 
-VS Code does the saving and undo, so Save, Undo, Redo, dirty markers and Local History work as in any other editor. The behaviour is covered by more than 150 automated tests that run on macOS, Windows and Linux on every change.
+VS Code does the saving and undo, so Save, Undo, Redo, dirty markers and Local History work as in any other editor. If another program changes the very text you just edited (for example it reverts the file), Inkwell starts Undo fresh and says so on the page, so Undo can never put the old edit back into the wrong place; changes made elsewhere in the file leave Undo working. The behaviour is covered by more than 150 automated tests that run on macOS, Windows and Linux on every change.
 
 ## Updates
 
@@ -214,6 +267,7 @@ Install from a Marketplace and updates arrive automatically. VS Code installs a 
 ## Limitations
 
 - Tables inside lists or quotes stay as raw Markdown text.
+- Find does not match across a line break, even in the middle of a wrapped paragraph that you typed on two lines.
 - No maths (LaTeX) rendering.
 - Not available in the browser (vscode.dev, github.dev).
 - Files larger than 2 MB open in VS Code's plain text editor.
